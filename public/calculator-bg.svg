@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600" width="100%" height="100%" aria-label="Rate Calculator Calculation Tech Background SVG">
+  <defs>
+    <!-- Light Hexagonal Mesh -->
+    <pattern id="hexMesh" width="60" height="52" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 60 15 L 60 45 L 30 60 L 0 45 L 0 15 Z" fill="none" stroke="#1D3563" stroke-width="1" opacity="0.06"/>
+    </pattern>
+
+    <linearGradient id="calculatorGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F37B23" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#1D3563" stop-opacity="0.05"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="600" fill="url(#hexMesh)"/>
+
+  <!-- Radial Speed Accents & Currency Motifs -->
+  <g stroke="#F37B23" fill="none" opacity="0.25">
+    <!-- Concentric Target Circles around calculator -->
+    <circle cx="600" cy="300" r="180" stroke-width="1.5" stroke-dasharray="12 8"/>
+    <circle cx="600" cy="300" r="280" stroke-width="1" stroke-dasharray="20 10"/>
+    <circle cx="600" cy="300" r="380" stroke-width="1"/>
+  </g>
+
+  <!-- Abstract Floating Parcel Scale / Calculator Geometry -->
+  <g transform="translate(100, 100)" opacity="0.12" fill="#1D3563">
+    <!-- Scale Platform Motif Left -->
+    <rect x="0" y="200" width="160" height="12" rx="4"/>
+    <path d="M 30 200 L 50 140 L 110 140 L 130 200 Z"/>
+    <circle cx="80" cy="100" r="25"/>
+  </g>
+
+  <g transform="translate(940, 150)" opacity="0.15" fill="#F37B23">
+    <!-- Currency / Percentage Tech Accents Right -->
+    <text x="0" y="0" font-family="sans-serif" font-weight="900" font-size="72">%</text>
+    <text x="60" y="180" font-family="sans-serif" font-weight="900" font-size="64">$</text>
+  </g>
+</svg>
