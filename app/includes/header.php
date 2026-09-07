@@ -44,7 +44,7 @@ if (!isset($activeNav)) {
   </script>
 
   <!-- External Stylesheet -->
-  <link rel="stylesheet" href="./css/style.css">
+  <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased selection:bg-brandOrange selection:text-white flex flex-col min-h-screen">
 

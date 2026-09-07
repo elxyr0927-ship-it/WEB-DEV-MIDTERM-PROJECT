@@ -3,7 +3,7 @@ $pageTitle = "Book Delivery & Dispatch | YOCOR Express";
 $activeNav = "booking";
 $prefilledService = isset($_GET['service']) ? htmlspecialchars($_GET['service']) : 'express';
 
-include 'includes/header.php';
+include __DIR__ . '/../includes/header.php';
 ?>
 
 <main class="flex-grow py-12 bg-slate-50">
@@ -117,4 +117,4 @@ include 'includes/header.php';
   </div>
 </main>
 
-<?php include 'includes/footer.php'; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

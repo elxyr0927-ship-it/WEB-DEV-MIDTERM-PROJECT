@@ -1,6 +1,6 @@
 <?php
 
-require 'database/config.php';
+require_once __DIR__ . '/../database/config.php';
 
 $pdo  = getConnection();
 $sql  = "SELECT id, username, email, age FROM user ORDER BY id ASC";

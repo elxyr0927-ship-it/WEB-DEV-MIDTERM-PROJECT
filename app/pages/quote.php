@@ -2,7 +2,7 @@
 $pageTitle = "Instant Shipping Rate Calculator | YOCOR Express";
 $activeNav = "quote";
 
-include 'includes/header.php';
+include __DIR__ . '/../includes/header.php';
 ?>
 
 <main class="flex-grow">
@@ -18,7 +18,7 @@ include 'includes/header.php';
   </section>
 
   <!-- Quote Section Form -->
-  <?php include 'includes/sections/quote.php'; ?>
+  <?php include __DIR__ . '/../includes/sections/quote.php'; ?>
 
   <!-- FAQ / Price Breakdown Info -->
   <section class="py-16 bg-white border-t border-slate-200">
@@ -44,4 +44,4 @@ include 'includes/header.php';
   </section>
 </main>
 
-<?php include 'includes/footer.php'; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

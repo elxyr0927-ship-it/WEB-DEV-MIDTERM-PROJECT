@@ -1,18 +1,63 @@
 <?php
+/**
+ * YOCOR Express Logistics - Front Controller & Router
+ * Routes requests to dedicated controllers/pages in app/pages/
+ */
+
+// Determine the requested route/page
+$page = isset($_GET['page']) ? trim($_GET['page']) : '';
+
+// Also support direct path if queried or fallback
+if (empty($page)) {
+    $uri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+    $scriptName = dirname($_SERVER['SCRIPT_NAME'] ?? '');
+    
+    // Normalize path relative to project folder
+    $relative = trim(str_replace($scriptName, '', $uri), '/');
+    $parts = explode('/', $relative);
+    $first = $parts[0] ?? '';
+    
+    // If it ends with .php, strip it
+    $cleanRoute = preg_replace('/\.php$/', '', $first);
+    
+    if (!empty($cleanRoute) && $cleanRoute !== 'index') {
+        $page = $cleanRoute;
+    }
+}
+
+// Available pages whitelist
+$routes = [
+    'services' => __DIR__ . '/app/pages/services.php',
+    'tracking' => __DIR__ . '/app/pages/tracking.php',
+    'quote'    => __DIR__ . '/app/pages/quote.php',
+    'booking'  => __DIR__ . '/app/pages/booking.php',
+    'contact'  => __DIR__ . '/app/pages/contact.php',
+    'student'  => __DIR__ . '/app/pages/student.php',
+    'success'  => __DIR__ . '/app/pages/success.php',
+    'info'     => __DIR__ . '/app/pages/info.php',
+];
+
+// If requesting a specific page from the route whitelist, load it
+if (!empty($page) && isset($routes[$page])) {
+    require $routes[$page];
+    exit;
+}
+
+// Otherwise, render Home Page
 $pageTitle = "YOCOR Express Logistic | Premier Global Logistics & Transport";
 $activeNav = "home";
 
-include 'includes/header.php';
+include __DIR__ . '/app/includes/header.php';
 ?>
 
 <main class="flex-grow">
-  <?php include 'includes/sections/hero.php'; ?>
-  <?php include 'includes/sections/stats.php'; ?>
-  <?php include 'includes/sections/how-it-works.php'; ?>
-  <?php include 'includes/sections/mission.php'; ?>
-  <?php include 'includes/sections/services.php'; ?>
-  <?php include 'includes/sections/why-us.php'; ?>
-  <?php include 'includes/sections/quote.php'; ?>
+  <?php include __DIR__ . '/app/includes/sections/hero.php'; ?>
+  <?php include __DIR__ . '/app/includes/sections/stats.php'; ?>
+  <?php include __DIR__ . '/app/includes/sections/how-it-works.php'; ?>
+  <?php include __DIR__ . '/app/includes/sections/mission.php'; ?>
+  <?php include __DIR__ . '/app/includes/sections/services.php'; ?>
+  <?php include __DIR__ . '/app/includes/sections/why-us.php'; ?>
+  <?php include __DIR__ . '/app/includes/sections/quote.php'; ?>
 </main>
 
-<?php include 'includes/footer.php'; ?>
+<?php include __DIR__ . '/app/includes/footer.php'; ?>

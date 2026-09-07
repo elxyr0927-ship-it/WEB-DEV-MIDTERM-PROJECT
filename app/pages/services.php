@@ -2,7 +2,7 @@
 $pageTitle = "Our Logistics Services | YOCOR Express";
 $activeNav = "services";
 
-include 'includes/header.php';
+include __DIR__ . '/../includes/header.php';
 ?>
 
 <main class="flex-grow">
@@ -21,7 +21,7 @@ include 'includes/header.php';
   </section>
 
   <!-- Include Core Services Grid -->
-  <?php include 'includes/sections/services.php'; ?>
+  <?php include __DIR__ . '/../includes/sections/services.php'; ?>
 
   <!-- Extended Services Details Section -->
   <section class="py-16 bg-white border-b border-slate-200">
@@ -66,8 +66,8 @@ include 'includes/header.php';
   </section>
 
   <!-- How It Works Section -->
-  <?php include 'includes/sections/how-it-works.php'; ?>
+  <?php include __DIR__ . '/../includes/sections/how-it-works.php'; ?>
 
 </main>
 
-<?php include 'includes/footer.php'; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

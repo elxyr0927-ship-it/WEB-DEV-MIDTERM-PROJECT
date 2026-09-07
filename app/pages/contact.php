@@ -2,7 +2,7 @@
 $pageTitle = "Contact & Hub Locations | YOCOR Express";
 $activeNav = "contact";
 
-include 'includes/header.php';
+include __DIR__ . '/../includes/header.php';
 ?>
 
 <main class="flex-grow py-12 bg-slate-50">
@@ -138,4 +138,4 @@ include 'includes/header.php';
   </div>
 </main>
 
-<?php include 'includes/footer.php'; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

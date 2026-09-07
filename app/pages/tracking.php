@@ -3,7 +3,7 @@ $pageTitle = "Track Shipment Status | YOCOR Express Logistics";
 $activeNav = "tracking";
 $searchedTracking = isset($_GET['tracking_no']) ? trim($_GET['tracking_no']) : '';
 
-include 'includes/header.php';
+include __DIR__ . '/../includes/header.php';
 ?>
 
 <main class="flex-grow py-12 bg-slate-50">
@@ -164,4 +164,4 @@ function loadSampleTracking(id) {
 }
 </script>
 
-<?php include 'includes/footer.php'; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

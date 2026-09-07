@@ -3,7 +3,7 @@ $status  = $_GET['status'] ?? null;
 $message = $_GET['message'] ?? null;
 $id      = $_GET['id'] ?? null;
 
-require 'database/config.php';
+require_once __DIR__ . '/../database/config.php';
 
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
