@@ -27,7 +27,7 @@ require_once 'app/database/validation.php';
 
             //check username
             $stmt = $pdo->prepare('SELECT id FROM user WHERE username = :username');
-            $stmt = $pdo->execute(['username' => $username]);
+            $stmt->execute(['username' => $username]);
 
             if ($stmt->fetch()){
              $errors [] = 'Username already taken. Please choose another.';
@@ -44,7 +44,7 @@ require_once 'app/database/validation.php';
 
         try {
             $pdo = getConnection();
-            $stmt = $pdo->prepare("
+            $stmt->prepare("
             INSERT INTO user(username,email,age,password_hash,role)
             VALUES(:username, :email, :age, :hash, 'customer') ");
 
