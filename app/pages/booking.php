@@ -32,7 +32,7 @@ $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $pageTitle = "Book Delivery | YOCOR Express";
 $activeNav = "booking";
 
-include 'includes/header.php';
+include __DIR__ . '/../includes/header.php';
 ?>
 
 <main class="flex-grow py-12 bg-slate-50">
