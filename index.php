@@ -5,7 +5,7 @@
  */
 
 // Determine the requested route/page
-$page = isset($_GET['page']) ? trim($_GET['page']) : '';
+$page = isset($_GET['page']) ? trim(preg_replace('/\.php$/', '', $_GET['page'])) : '';
 
 // Also support direct path if queried or fallback
 if (empty($page)) {
@@ -35,6 +35,8 @@ $routes = [
     'student'  => __DIR__ . '/app/pages/student.php',
     'success'  => __DIR__ . '/app/pages/success.php',
     'info'     => __DIR__ . '/app/pages/info.php',
+    'customer_dashboard' => __DIR__ . '/app/pages/customer_dashboard.php',
+    'admin_dashboard' => __DIR__ . '/app/pages/admin_dashboard.php'
 ];
 
 // If requesting a specific page from the route whitelist, load it
