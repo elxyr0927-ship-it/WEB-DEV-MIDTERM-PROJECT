@@ -1,7 +1,7 @@
 <?php
  
-require_once 'database/config.php';
-require_once 'database/validation.php';
+require_once 'app/database/config.php';
+require_once 'app/database/validation.php';
 
  $errors = [];
  $success = false;
@@ -11,7 +11,8 @@ require_once 'database/validation.php';
     $email = trim($_POST['email'] ?? '');
     $age = trim($_POST['age'] ?? '');
     $password = ($_POST['password'] ?? '');
-
+    $confirm = $_POST['confirm_password'] ?? '';
+    
     if ($err = validateRequired($username, 'Username')) $errors[] = $err;
     if ($err = validateEmailFormat($email)) $errors[] = $err;
     if ($err = validateIntRange($age, 'Age', 1, 120)) $errors[] = $err;
@@ -26,7 +27,7 @@ require_once 'database/validation.php';
 
             //check username
             $stmt = $pdo->prepare('SELECT id FROM user WHERE username = :username');
-            $stmt= $pdo->execute(['username' => $username]);
+            $stmt = $pdo->execute(['username' => $username]);
 
             if ($stmt->fetch()){
              $errors [] = 'Username already taken. Please choose another.';
@@ -47,7 +48,7 @@ require_once 'database/validation.php';
             INSERT INTO user(username,email,age,password_hash,role)
             VALUES(:username, :email, :age, :hash, 'customer') ");
 
-            $stmt->execute([
+            $stmt = $pdo->execute([
                 'username' => $username,
                 'email' => $email,
                 'age' => $age,
@@ -73,7 +74,21 @@ require_once 'database/validation.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register | YOCOR Express</title>
-    <link rel="stylesheet" href="https://cdn.tailwindcss.com">
+    <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+        tailwind.config = {
+            theme: {
+            extend: {
+                colors: {
+                brandNavy: '#1D3563',
+                brandOrange: '#F37B23',
+                brandLight: '#F8FAFC',
+                brandDark: '#0B132B'
+                }
+            }
+            }
+        }
+</script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
 </head>

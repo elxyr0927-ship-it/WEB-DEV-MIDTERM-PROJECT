@@ -1,4 +1,8 @@
 <?php
+
+if (session_status() === PHP_SESSION_NONE){
+  session_start();
+}
 // Default page title and active nav indicator
 if (!isset($pageTitle)) {
     $pageTitle = "YOCOR Express Logistic | Premier Global Logistics & Transport";
@@ -118,6 +122,28 @@ if (!isset($activeNav)) {
         <a href="quote.php" class="<?php echo ($activeNav === 'quote') ? 'text-brandOrange font-bold' : 'hover:text-brandOrange transition-colors'; ?>">Rate Calculator</a>
         <a href="booking.php" class="<?php echo ($activeNav === 'booking') ? 'text-brandOrange font-bold' : 'hover:text-brandOrange transition-colors'; ?>">Book Delivery</a>
         <a href="contact.php" class="<?php echo ($activeNav === 'contact') ? 'text-brandOrange font-bold' : 'hover:text-brandOrange transition-colors'; ?>">Contact</a>
+
+         <?php if (isset($_SESSION['user_id'])): ?>
+        <span class="text-sm font-bold text-brandNavy">
+            <i class="fa-regular fa-user text-brandOrange"></i> 
+            <?= htmlspecialchars($_SESSION['username']) ?>
+        </span>
+        <?php if ($_SESSION['role'] === 'admin'): ?>
+            <a href="admin_dashboard.php" class="hover:text-brandOrange transition-colors">
+                <i class="fa-solid fa-gauge-high"></i> Admin
+            </a>
+        <?php else: ?>
+            <a href="customer_dashboard.php" class="hover:text-brandOrange transition-colors">
+                <i class="fa-solid fa-box"></i> My Orders
+            </a>
+        <?php endif; ?>
+        <a href="logout.php" class="hover:text-brandOrange transition-colors">
+            <i class="fa-solid fa-right-from-bracket"></i> Logout
+        </a>
+    <?php else: ?>
+        <a href="register.php" class="hover:text-brandOrange transition-colors">Register</a>
+        <a href="login.php" class="hover:text-brandOrange transition-colors">Login</a>
+    <?php endif; ?>
       </nav>
 
       <!-- CTA Button & Mobile Menu Toggle -->
@@ -140,5 +166,25 @@ if (!isset($activeNav)) {
       <a href="quote.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">Rate Calculator</a>
       <a href="booking.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">Book Delivery</a>
       <a href="contact.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">Contact Support</a>
+      
+      <?php if (isset($_SESSION['user_id'])): ?>
+        <div class="border-t border-slate-200 pt-2 mt-2">
+            <span class="block py-2 px-3 text-xs text-slate-500">
+                <i class="fa-regular fa-user text-brandOrange"></i> 
+                <?= htmlspecialchars($_SESSION['username']) ?>
+            </span>
+            <?php if ($_SESSION['role'] === 'admin'): ?>
+                <a href="admin_dashboard.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">Admin Dashboard</a>
+            <?php else: ?>
+                <a href="customer_dashboard.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">My Orders</a>
+            <?php endif; ?>
+            <a href="logout.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">Logout</a>
+        </div>
+    <?php else: ?>
+        <div class="border-t border-slate-200 pt-2 mt-2">
+            <a href="register.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">Register</a>
+            <a href="login.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">Login</a>
+        </div>
+    <?php endif; ?>
     </div>
   </header>

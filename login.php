@@ -13,8 +13,8 @@ if (isset($_SESSION['user_id'])) {
 }
 
 // Include database and validation
-require_once 'database/config.php';
-require_once 'database/validation.php';
+require_once 'app/database/config.php';
+require_once 'app/database/validation.php';
 
 $errors = [];
 
@@ -65,7 +65,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login | YOCOR Express</title>
-    <link rel="stylesheet" href="https://cdn.tailwindcss.com">
+    <script src="https://cdn.tailwindcss.com"></script>
+        <script>
+        tailwind.config = {
+            theme: {
+            extend: {
+                colors: {
+                brandNavy: '#1D3563',
+                brandOrange: '#F37B23',
+                brandLight: '#F8FAFC',
+                brandDark: '#0B132B'
+                }
+            }
+            }
+        }
+</script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
