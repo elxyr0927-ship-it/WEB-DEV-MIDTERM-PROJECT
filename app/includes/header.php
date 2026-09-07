@@ -71,11 +71,11 @@ if (!isset($activeNav)) {
 
   <!-- NAVIGATION BAR -->
   <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       
       <!-- SVG LOGO -->
       <a href="index.php" class="flex items-center focus:outline-none" aria-label="YOCOR Express Logistic Homepage">
-        <svg class="h-11 w-auto" viewBox="0 0 301.18 68.85" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg class="h-8 w-auto" viewBox="0 0 301.18 68.85" fill="none" xmlns="http://www.w3.org/2000/svg">
           <g id="Layer_1-2" data-name="Layer 1">
             <g>
               <polygon fill="#F37B23" points="238.21 13.97 240.29 18.06 244.96 18.72 241.58 21.9 242.38 26.4 238.21 24.28 234.04 26.4 234.84 21.9 231.46 18.72 236.13 18.06 238.21 13.97"/>
@@ -115,76 +115,120 @@ if (!isset($activeNav)) {
       </a>
 
       <!-- Desktop Nav Links -->
-      <nav class="hidden md:flex items-center space-x-7 font-semibold text-brandNavy text-sm">
+      <nav class="hidden lg:flex items-center space-x-4 font-semibold text-brandNavy text-xs">
         <a href="index.php" class="<?php echo ($activeNav === 'home') ? 'text-brandOrange font-bold' : 'hover:text-brandOrange transition-colors'; ?>">Home</a>
         <a href="services.php" class="<?php echo ($activeNav === 'services') ? 'text-brandOrange font-bold' : 'hover:text-brandOrange transition-colors'; ?>">Services</a>
-        <a href="tracking.php" class="<?php echo ($activeNav === 'tracking') ? 'text-brandOrange font-bold' : 'hover:text-brandOrange transition-colors'; ?>">Track Shipment</a>
+        <a href="tracking.php" class="<?php echo ($activeNav === 'tracking') ? 'text-brandOrange font-bold' : 'hover:text-brandOrange transition-colors'; ?>">Track</a>
         <a href="quote.php" class="<?php echo ($activeNav === 'quote') ? 'text-brandOrange font-bold' : 'hover:text-brandOrange transition-colors'; ?>">Rate Calculator</a>
         <a href="booking.php" class="<?php echo ($activeNav === 'booking') ? 'text-brandOrange font-bold' : 'hover:text-brandOrange transition-colors'; ?>">Book Delivery</a>
         <a href="contact.php" class="<?php echo ($activeNav === 'contact') ? 'text-brandOrange font-bold' : 'hover:text-brandOrange transition-colors'; ?>">Contact</a>
-
-         <?php if (isset($_SESSION['user_id'])): ?>
-        <span class="text-sm font-bold text-brandNavy">
-            <i class="fa-regular fa-user text-brandOrange"></i> 
-            <?= htmlspecialchars($_SESSION['username']) ?>
-        </span>
-        <?php if ($_SESSION['role'] === 'admin'): ?>
-            <a href="admin_dashboard.php" class="hover:text-brandOrange transition-colors">
-                <i class="fa-solid fa-gauge-high"></i> Admin
-            </a>
-        <?php else: ?>
-            <a href="customer_dashboard.php" class="hover:text-brandOrange transition-colors">
-                <i class="fa-solid fa-box"></i> My Orders
-            </a>
-        <?php endif; ?>
-        <a href="logout.php" class="hover:text-brandOrange transition-colors">
-            <i class="fa-solid fa-right-from-bracket"></i> Logout
-        </a>
-    <?php else: ?>
-        <a href="register.php" class="hover:text-brandOrange transition-colors">Register</a>
-        <a href="login.php" class="hover:text-brandOrange transition-colors">Login</a>
-    <?php endif; ?>
       </nav>
 
-      <!-- CTA Button & Mobile Menu Toggle -->
-      <div class="flex items-center space-x-3">
-        <a href="booking.php" class="hidden sm:inline-flex bg-brandOrange hover:bg-orange-600 text-white font-bold text-xs md:text-sm px-4 md:px-5 py-2.5 rounded-lg brand-glow-orange transition-all transform hover:-translate-y-0.5 items-center gap-2">
-          <span>Book Shipment</span>
-          <i class="fa-solid fa-arrow-right text-xs"></i>
-        </a>
-        <button id="mobile-menu-btn" class="md:hidden text-brandNavy text-xl p-2 rounded-lg hover:bg-slate-100 focus:outline-none" aria-label="Toggle Navigation Menu">
+      <!-- Desktop Auth / Action Area -->
+      <div class="hidden md:flex items-center space-x-2.5">
+        <?php if (isset($_SESSION['user_id'])): ?>
+          <!-- Logged In User Dropdown/Pill -->
+          <div class="flex items-center bg-slate-100 hover:bg-slate-200/80 rounded-xl p-1 transition-all text-[11px]">
+            <span class="px-2 py-0.5 text-slate-700 font-bold flex items-center gap-1.5">
+              <i class="fa-regular fa-user text-brandOrange"></i>
+              <?= htmlspecialchars($_SESSION['username']) ?>
+            </span>
+
+            <?php if ($_SESSION['role'] === 'admin'): ?>
+              <a href="admin_dashboard.php" class="bg-brandNavy text-white px-2.5 py-1 rounded-lg font-bold hover:bg-slate-900 transition-all flex items-center gap-1 shadow-sm">
+                <i class="fa-solid fa-gauge-high text-[10px]"></i> Admin
+              </a>
+            <?php else: ?>
+              <a href="customer_dashboard.php" class="bg-brandOrange text-white px-2.5 py-1 rounded-lg font-bold hover:bg-orange-600 transition-all flex items-center gap-1 shadow-sm">
+                <i class="fa-solid fa-box text-[10px]"></i> My Orders
+              </a>
+            <?php endif; ?>
+
+            <a href="logout.php" title="Logout" class="text-slate-500 hover:text-red-600 px-1.5 py-0.5 transition-colors">
+              <i class="fa-solid fa-right-from-bracket"></i>
+            </a>
+          </div>
+
+        <?php else: ?>
+          <!-- Guest Links -->
+          <a href="login.php" class="text-brandNavy hover:text-brandOrange font-bold text-xs px-2.5 py-1.5 transition-colors">
+            Sign In
+          </a>
+          <a href="register.php" class="bg-slate-100 hover:bg-slate-200 text-brandNavy font-bold text-xs px-3 py-1.5 rounded-lg transition-all border border-slate-200">
+            Register
+          </a>
+          <a href="booking.php" class="bg-brandOrange hover:bg-orange-600 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg brand-glow-orange transition-all shadow flex items-center gap-1.5">
+            <span>Book Now</span>
+            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+          </a>
+        <?php endif; ?>
+      </div>
+
+      <!-- Mobile Menu Toggle Button -->
+      <div class="flex lg:hidden items-center space-x-2">
+        <?php if (isset($_SESSION['user_id'])): ?>
+          <?php if ($_SESSION['role'] === 'admin'): ?>
+            <a href="admin_dashboard.php" class="text-xs bg-brandNavy text-white font-bold px-2.5 py-1.5 rounded-lg">
+              Admin
+            </a>
+          <?php else: ?>
+            <a href="customer_dashboard.php" class="text-xs bg-brandOrange text-white font-bold px-2.5 py-1.5 rounded-lg">
+              Orders
+            </a>
+          <?php endif; ?>
+        <?php else: ?>
+          <a href="login.php" class="text-xs text-brandOrange font-bold px-2 py-1.5">
+            Sign In
+          </a>
+        <?php endif; ?>
+
+        <button id="mobile-menu-btn" class="text-brandNavy text-xl p-2 rounded-lg hover:bg-slate-100 focus:outline-none" aria-label="Toggle Navigation Menu">
           <i class="fa-solid fa-bars"></i>
         </button>
       </div>
     </div>
 
     <!-- Mobile Navigation Drawer -->
-    <div id="mobile-menu" class="hidden md:hidden bg-white border-b border-slate-200 px-4 pt-2 pb-4 space-y-2 text-sm font-medium text-brandNavy shadow-lg">
-      <a href="index.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">Home</a>
-      <a href="services.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">Services</a>
-      <a href="tracking.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">Track Shipment</a>
-      <a href="quote.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">Rate Calculator</a>
-      <a href="booking.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">Book Delivery</a>
-      <a href="contact.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">Contact Support</a>
+    <div id="mobile-menu" class="hidden lg:hidden bg-white border-b border-slate-200 px-4 pt-2 pb-5 space-y-1 text-sm font-medium text-brandNavy shadow-lg">
+      <a href="index.php" class="block py-2.5 px-3 rounded-xl hover:bg-orange-50 hover:text-brandOrange transition-colors">Home</a>
+      <a href="services.php" class="block py-2.5 px-3 rounded-xl hover:bg-orange-50 hover:text-brandOrange transition-colors">Services</a>
+      <a href="tracking.php" class="block py-2.5 px-3 rounded-xl hover:bg-orange-50 hover:text-brandOrange transition-colors">Track Shipment</a>
+      <a href="quote.php" class="block py-2.5 px-3 rounded-xl hover:bg-orange-50 hover:text-brandOrange transition-colors">Rate Calculator</a>
+      <a href="booking.php" class="block py-2.5 px-3 rounded-xl hover:bg-orange-50 hover:text-brandOrange transition-colors">Book Delivery</a>
+      <a href="contact.php" class="block py-2.5 px-3 rounded-xl hover:bg-orange-50 hover:text-brandOrange transition-colors">Contact Support</a>
       
       <?php if (isset($_SESSION['user_id'])): ?>
-        <div class="border-t border-slate-200 pt-2 mt-2">
-            <span class="block py-2 px-3 text-xs text-slate-500">
-                <i class="fa-regular fa-user text-brandOrange"></i> 
-                <?= htmlspecialchars($_SESSION['username']) ?>
+        <div class="border-t border-slate-100 pt-3 mt-3 space-y-2">
+          <div class="px-3 py-2 bg-slate-50 rounded-xl flex items-center justify-between text-xs text-slate-600 font-bold">
+            <span class="flex items-center gap-2">
+              <i class="fa-regular fa-user text-brandOrange"></i> <?= htmlspecialchars($_SESSION['username']) ?>
             </span>
-            <?php if ($_SESSION['role'] === 'admin'): ?>
-                <a href="admin_dashboard.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">Admin Dashboard</a>
-            <?php else: ?>
-                <a href="customer_dashboard.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">My Orders</a>
-            <?php endif; ?>
-            <a href="logout.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">Logout</a>
+            <span class="uppercase text-[10px] tracking-widest px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+              <?= htmlspecialchars($_SESSION['role']) ?>
+            </span>
+          </div>
+          <?php if ($_SESSION['role'] === 'admin'): ?>
+            <a href="admin_dashboard.php" class="block py-2.5 px-3 rounded-xl bg-brandNavy text-white font-bold text-center">
+              <i class="fa-solid fa-gauge-high mr-2"></i> Admin Dashboard
+            </a>
+          <?php else: ?>
+            <a href="customer_dashboard.php" class="block py-2.5 px-3 rounded-xl bg-brandOrange text-white font-bold text-center">
+              <i class="fa-solid fa-box mr-2"></i> My Orders
+            </a>
+          <?php endif; ?>
+          <a href="logout.php" class="block py-2 px-3 rounded-xl text-center text-red-600 font-bold hover:bg-red-50 transition-colors">
+            <i class="fa-solid fa-right-from-bracket mr-1"></i> Logout
+          </a>
         </div>
-    <?php else: ?>
-        <div class="border-t border-slate-200 pt-2 mt-2">
-            <a href="register.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">Register</a>
-            <a href="login.php" class="block py-2 px-3 rounded-lg hover:bg-orange-50 hover:text-brandOrange">Login</a>
+      <?php else: ?>
+        <div class="border-t border-slate-100 pt-3 mt-3 grid grid-cols-2 gap-2">
+          <a href="login.php" class="text-center py-2.5 px-3 rounded-xl bg-slate-100 text-brandNavy font-bold hover:bg-slate-200 transition-colors">
+            Sign In
+          </a>
+          <a href="register.php" class="text-center py-2.5 px-3 rounded-xl bg-brandOrange text-white font-bold hover:bg-orange-600 transition-colors shadow">
+            Register
+          </a>
         </div>
-    <?php endif; ?>
+      <?php endif; ?>
     </div>
   </header>

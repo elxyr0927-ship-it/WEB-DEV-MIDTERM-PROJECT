@@ -38,6 +38,8 @@ $routes = [
     'customer_dashboard' => __DIR__ . '/app/pages/customer_dashboard.php',
     'admin_dashboard'    => __DIR__ . '/app/pages/admin_dashboard.php',
     'process_booking'    => __DIR__ . '/process_booking.php',
+    'terms'              => __DIR__ . '/app/pages/terms.php',
+    'security'           => __DIR__ . '/app/pages/security.php',
 ];
 
 // If requesting a specific page from the route whitelist, load it

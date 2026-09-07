@@ -25,89 +25,115 @@ require_once 'app/database/validation.php';
         try {
             $pdo = getConnection();
 
-            //check username
-            $stmt = $pdo->prepare('SELECT id FROM user WHERE username = :username');
-            $stmt->execute(['username' => $username]);
+            // Check if username or email already taken
+            $stmt = $pdo->prepare('SELECT id, username, email FROM user WHERE username = :username OR email = :email LIMIT 1');
+            $stmt->execute(['username' => $username, 'email' => $email]);
+            $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($stmt->fetch()){
-             $errors [] = 'Username already taken. Please choose another.';
+            if ($existing) {
+                if (strtolower($existing['username']) === strtolower($username)) {
+                    $errors[] = 'Username already taken. Please choose another.';
+                }
+                if (strtolower($existing['email']) === strtolower($email)) {
+                    $errors[] = 'Email address is already registered. Please sign in or use another.';
+                }
             }
-
         } catch (PDOException $e) {
             $errors[] = 'Database error: ' . $e->getMessage();
         }
-
     }
 
-    if (empty($errors)){
+    if (empty($errors)) {
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
         try {
             $pdo = getConnection();
-            $stmt->prepare("
-            INSERT INTO user(username,email,age,password_hash,role)
-            VALUES(:username, :email, :age, :hash, 'customer') ");
+            $stmt = $pdo->prepare("
+                INSERT INTO user (username, email, age, password_hash, role)
+                VALUES (:username, :email, :age, :hash, 'customer')
+            ");
 
-            $stmt = $pdo->execute([
+            $stmt->execute([
                 'username' => $username,
-                'email' => $email,
-                'age' => $age,
-                'hash' => $hashedPassword
+                'email'    => $email,
+                'age'      => $age,
+                'hash'     => $hashedPassword
             ]);
 
             header('Location: login.php?registered=1');
             exit;
 
-        } catch (PDOException $e){
+        } catch (PDOException $e) {
             $errors[] = 'Registration failed: ' . $e->getMessage();
-    
         }
-
     }
- }
-
+}
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Register | YOCOR Express</title>
+    <title>Create Account | YOCOR Express</title>
     <script src="https://cdn.tailwindcss.com"></script>
-        <script>
-        tailwind.config = {
-            theme: {
-            extend: {
-                colors: {
-                brandNavy: '#1D3563',
-                brandOrange: '#F37B23',
-                brandLight: '#F8FAFC',
-                brandDark: '#0B132B'
-                }
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brandNavy: '#1D3563',
+              brandOrange: '#F37B23',
+              brandLight: '#F8FAFC',
+              brandDark: '#0B132B'
+            },
+            fontFamily: {
+              sans: ['Roboto', 'sans-serif'],
+              heading: ['Montserrat', 'sans-serif'],
             }
-            }
+          }
         }
-</script>
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body class="bg-slate-50 min-h-screen flex items-center justify-center">
-    <div class="max-w-md w-full mx-4">
-        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
-            
+<body class="bg-gradient-to-br from-slate-100 via-slate-50 to-orange-50/40 min-h-screen flex flex-col justify-center items-center py-10 px-4 sm:px-6">
+
+    <!-- Top Back to Home -->
+    <div class="w-full max-w-lg mb-6 flex items-center justify-between">
+        <a href="index.php" class="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-brandNavy transition-colors group">
+            <i class="fa-solid fa-arrow-left transition-transform group-hover:-translate-x-1"></i>
+            <span>Back to Home</span>
+        </a>
+        <span class="text-xs text-slate-400 font-medium">Customer Registration</span>
+    </div>
+
+    <!-- Main Card -->
+    <div class="max-w-lg w-full">
+        <div class="bg-white rounded-3xl shadow-2xl shadow-slate-200/80 border border-slate-200/90 p-8 sm:p-10 relative overflow-hidden">
+            <!-- Accent top bar -->
+            <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-brandOrange via-amber-500 to-brandNavy"></div>
+
             <!-- Logo / Brand -->
             <div class="text-center mb-8">
-                <a href="index.php" class="text-2xl font-black text-brandNavy">
-                    YOCOR <span class="text-brandOrange">Express</span>
+                <a href="index.php" class="inline-flex items-center justify-center focus:outline-none mb-3 hover:opacity-95 transition-opacity">
+                    <img src="public/Asset%205.svg" alt="YOCOR Express" class="h-10 sm:h-12 w-auto object-contain">
                 </a>
-                <p class="text-slate-500 text-sm mt-1">Create your customer account</p>
+                <h1 class="text-xl font-bold text-slate-800 font-heading">Create Customer Account</h1>
+                <p class="text-slate-500 text-xs mt-1">Start shipping packages and managing global deliveries</p>
             </div>
 
             <!-- Error Messages -->
             <?php if (!empty($errors)): ?>
-                <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm">
-                    <ul class="list-disc list-inside space-y-1">
+                <div class="bg-rose-50 border border-rose-200 text-rose-800 px-4 py-3.5 rounded-2xl mb-6 text-xs">
+                    <div class="flex items-center gap-2 font-bold mb-1">
+                        <i class="fa-solid fa-circle-exclamation text-rose-600"></i>
+                        <span>Please fix the following:</span>
+                    </div>
+                    <ul class="list-disc list-inside space-y-0.5 text-rose-700">
                         <?php foreach ($errors as $error): ?>
                             <li><?= htmlspecialchars($error) ?></li>
                         <?php endforeach; ?>
@@ -117,51 +143,113 @@ require_once 'app/database/validation.php';
 
             <!-- Registration Form -->
             <form method="POST" action="" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Username</label>
-                    <input type="text" name="username" required 
-                           value="<?= htmlspecialchars($_POST['username'] ?? '') ?>"
-                           class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none transition-all">
+                <div class="grid sm:grid-cols-3 gap-3">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Username <span class="text-brandOrange">*</span></label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i class="fa-regular fa-user text-sm"></i>
+                            </div>
+                            <input type="text" name="username" required autocomplete="username"
+                                   placeholder="johndoe"
+                                   value="<?= htmlspecialchars($_POST['username'] ?? '') ?>"
+                                   class="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange/40 focus:border-brandOrange outline-none transition-all text-sm text-slate-800 placeholder-slate-400">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Age <span class="text-brandOrange">*</span></label>
+                        <input type="number" name="age" required min="1" max="120"
+                               placeholder="25"
+                               value="<?= htmlspecialchars($_POST['age'] ?? '') ?>"
+                               class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange/40 focus:border-brandOrange outline-none transition-all text-sm text-slate-800 text-center font-bold">
+                    </div>
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
-                    <input type="email" name="email" required 
-                           value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
-                           class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none transition-all">
+                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Email Address <span class="text-brandOrange">*</span></label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                            <i class="fa-regular fa-envelope text-sm"></i>
+                        </div>
+                        <input type="email" name="email" required autocomplete="email"
+                               placeholder="john@example.com"
+                               value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
+                               class="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange/40 focus:border-brandOrange outline-none transition-all text-sm text-slate-800 placeholder-slate-400">
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Age</label>
-                    <input type="number" name="age" required min="1" max="120"
-                           value="<?= htmlspecialchars($_POST['age'] ?? '') ?>"
-                           class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none transition-all">
+                <div class="grid sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Password <span class="text-slate-400 font-normal">(min 8)</span></label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i class="fa-regular fa-lock text-sm"></i>
+                            </div>
+                            <input type="password" id="reg-password" name="password" required autocomplete="new-password"
+                                   placeholder="••••••••"
+                                   class="w-full pl-10 pr-10 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange/40 focus:border-brandOrange outline-none transition-all text-sm text-slate-800 placeholder-slate-400">
+                            <button type="button" onclick="togglePasswordVisibility('reg-password', this)" 
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
+                                    aria-label="Toggle password visibility">
+                                <i class="fa-regular fa-eye text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Confirm Password</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i class="fa-regular fa-lock-check text-sm"></i>
+                            </div>
+                            <input type="password" id="reg-confirm" name="confirm_password" required autocomplete="new-password"
+                                   placeholder="••••••••"
+                                   class="w-full pl-10 pr-10 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange/40 focus:border-brandOrange outline-none transition-all text-sm text-slate-800 placeholder-slate-400">
+                            <button type="button" onclick="togglePasswordVisibility('reg-confirm', this)" 
+                                    class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 focus:outline-none"
+                                    aria-label="Toggle password visibility">
+                                <i class="fa-regular fa-eye text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Password (min 8 characters)</label>
-                    <input type="password" name="password" required
-                           class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none transition-all">
+                <div class="pt-3">
+                    <button type="submit" 
+                            class="w-full bg-brandOrange hover:bg-orange-600 text-white font-bold py-3.5 px-4 rounded-xl transition-all shadow-lg hover:shadow-xl brand-glow-orange flex items-center justify-center gap-2 text-sm transform hover:-translate-y-0.5">
+                        <i class="fa-solid fa-user-plus text-xs"></i>
+                        <span>Create Account</span>
+                    </button>
                 </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1">Confirm Password</label>
-                    <input type="password" name="confirm_password" required
-                           class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none transition-all">
-                </div>
-
-                <button type="submit" 
-                        class="w-full bg-brandOrange hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg brand-glow-orange">
-                    Create Account
-                </button>
             </form>
 
             <!-- Login Link -->
-            <p class="text-center text-sm text-slate-600 mt-6">
-                Already have an account? 
-                <a href="login.php" class="text-brandOrange font-bold hover:underline">Login</a>
-            </p>
+            <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+                <p class="text-xs text-slate-600">
+                    Already have an account? 
+                    <a href="login.php" class="text-brandOrange font-bold hover:underline transition-colors ml-1">
+                        Sign In
+                    </a>
+                </p>
+            </div>
         </div>
     </div>
+
+    <!-- Quick JavaScript for Show/Hide Password -->
+    <script>
+      function togglePasswordVisibility(inputId, btn) {
+        const input = document.getElementById(inputId);
+        const icon = btn.querySelector('i');
+        if (input.type === 'password') {
+          input.type = 'text';
+          icon.classList.remove('fa-eye');
+          icon.classList.add('fa-eye-slash');
+        } else {
+          input.type = 'password';
+          icon.classList.remove('fa-eye-slash');
+          icon.classList.add('fa-eye');
+        }
+      }
+    </script>
 </body>
 </html>

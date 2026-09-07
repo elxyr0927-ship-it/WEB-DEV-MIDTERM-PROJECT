@@ -24,7 +24,14 @@ $errors = [];
 $service_id = filter_input(INPUT_POST, 'service_id', FILTER_VALIDATE_INT);
 $pickup = trim($_POST['pickup_address'] ?? '');
 $delivery = trim($_POST['delivery_address'] ?? '');
+$pickup_region = trim($_POST['pickup_region'] ?? 'Luzon');
+$delivery_region = trim($_POST['delivery_region'] ?? 'Luzon');
 $weight = filter_input(INPUT_POST, 'weight', FILTER_VALIDATE_FLOAT);
+
+// Valid Philippine island regions
+$valid_regions = ['Luzon', 'Visayas', 'Mindanao'];
+if (!in_array($pickup_region, $valid_regions)) $pickup_region = 'Luzon';
+if (!in_array($delivery_region, $valid_regions)) $delivery_region = 'Luzon';
 
 // === VALIDATE ALL INPUTS ===
 // Required fields (using instructor's function)
@@ -56,7 +63,7 @@ if (empty($errors)) {
         
         // Lock the service row to prevent race conditions
         // FOR UPDATE locks the row so other transactions wait
-        $stmt = $pdo->prepare("SELECT id, name, capacity FROM services WHERE id = :id FOR UPDATE");
+        $stmt = $pdo->prepare("SELECT id, name, capacity, base_price, price_per_kg FROM services WHERE id = :id FOR UPDATE");
         $stmt->execute(['id' => $service_id]);
         $service = $stmt->fetch(PDO::FETCH_ASSOC);
         
@@ -70,17 +77,38 @@ if (empty($errors)) {
             throw new Exception('Sorry, this service is currently fully booked. Please try another service.');
         }
         
-        // Insert booking
+        // Fetch dynamic regional distance rates from database
+        $regionalRates = getRegionalRates($pdo);
+        $routeKey = getRegionalRouteKey($pickup_region, $delivery_region);
+        $distanceFee = (float)($regionalRates[$routeKey] ?? 0.00);
+
+        // Fetch service pricing to compute or verify total cost
+        $base_price = (float)($service['base_price'] ?? 100.00);
+        $price_per_kg = (float)($service['price_per_kg'] ?? 40.00);
+        $calculated_cost = $base_price + (max(0, $weight - 1) * $price_per_kg) + $distanceFee;
+
+        // Retrieve submitted total cost, fallback to calculated cost
+        $submitted_cost = filter_input(INPUT_POST, 'total_cost', FILTER_VALIDATE_FLOAT);
+        $total_cost = ($submitted_cost !== false && $submitted_cost > 0) ? $submitted_cost : $calculated_cost;
+
+        // Generate unique tracking code (e.g. YR-A7F3B9)
+        $tracking_code = generateTrackingCode($pdo);
+
+        // Insert booking with total_cost, pickup_region, and delivery_region
         $stmt = $pdo->prepare("
-            INSERT INTO bookings (user_id, service_id, pickup_address, delivery_address, weight, status) 
-            VALUES (:user_id, :service_id, :pickup, :delivery, :weight, 'pending')
+            INSERT INTO bookings (tracking_code, user_id, service_id, pickup_region, delivery_region, pickup_address, delivery_address, weight, status, total_cost) 
+            VALUES (:tracking_code, :user_id, :service_id, :pickup_region, :delivery_region, :pickup, :delivery, :weight, 'pending', :total_cost)
         ");
         $stmt->execute([
+            'tracking_code' => $tracking_code,
             'user_id' => $_SESSION['user_id'],
             'service_id' => $service_id,
+            'pickup_region' => $pickup_region,
+            'delivery_region' => $delivery_region,
             'pickup' => $pickup,
             'delivery' => $delivery,
-            'weight' => $weight
+            'weight' => $weight,
+            'total_cost' => $total_cost
         ]);
         
         // Get the booking ID (optional, for reference)
@@ -93,8 +121,9 @@ if (empty($errors)) {
         // Commit transaction
         $pdo->commit();
         
-        // Success! Store success message in session and redirect
+        // Success! Store success message and tracking code in session and redirect
         $_SESSION['booking_success'] = true;
+        $_SESSION['last_tracking_code'] = $tracking_code;
         header('Location: booking.php');
         exit;
         

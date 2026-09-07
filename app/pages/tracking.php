@@ -1,167 +1,244 @@
 <?php
 $pageTitle = "Track Shipment Status | YOCOR Express Logistics";
 $activeNav = "tracking";
-$searchedTracking = isset($_GET['tracking_no']) ? trim($_GET['tracking_no']) : '';
+
+require_once __DIR__ . '/../database/config.php';
+
+// Accept tracking by ?id=... or ?code=... or ?tracking_no=... or form post
+$searchQuery = trim($_GET['id'] ?? ($_GET['code'] ?? ($_GET['tracking_no'] ?? ($_POST['tracking_no'] ?? ''))));
+
+$booking = null;
+$error = '';
+
+if (!empty($searchQuery)) {
+    try {
+        $pdo = getConnection();
+        
+        // Check if input is formatted as tracking code (e.g. YR-XXXXXX) or a pure number
+        if (stripos($searchQuery, 'YR-') === 0 || preg_match('/^[A-Za-z0-9-]+$/', $searchQuery)) {
+            $stmt = $pdo->prepare("
+                SELECT b.*, s.name AS service_name, u.username 
+                FROM bookings b 
+                JOIN services s ON b.service_id = s.id 
+                JOIN user u ON b.user_id = u.id 
+                WHERE b.tracking_code = :query OR b.id = :num_id
+            ");
+            $numericFallback = is_numeric($searchQuery) ? (int)$searchQuery : 0;
+            $stmt->execute([
+                'query' => strtoupper($searchQuery),
+                'num_id' => $numericFallback
+            ]);
+            $booking = $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+
+        if (!$booking) {
+            $error = "No shipment found matching Booking Code or ID '" . htmlspecialchars($searchQuery) . "'. Please verify your tracking code and try again.";
+        }
+    } catch (PDOException $e) {
+        $error = "Database query error: " . $e->getMessage();
+    }
+}
 
 include __DIR__ . '/../includes/header.php';
 ?>
 
-<main class="flex-grow py-12 bg-slate-50">
-  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+<main class="flex-grow py-8 bg-slate-50">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6">
     
     <!-- Page Header Banner -->
-    <div class="text-center max-w-2xl mx-auto mb-10 space-y-2">
-      <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-orange-100 text-brandOrange font-bold text-xs uppercase tracking-widest">
-        <i class="fa-solid fa-satellite-dish"></i> GPS Tracking Engine
+    <div class="text-center max-w-2xl mx-auto mb-6 space-y-1">
+      <div class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-orange-100 text-brandOrange font-bold text-[11px] uppercase tracking-widest">
+        <i class="fa-solid fa-satellite-dish text-xs"></i> GPS Tracking Engine
       </div>
-      <h1 class="text-3xl font-black text-brandNavy">Shipment Tracking Center</h1>
-      <p class="text-slate-600 text-sm">Enter your tracking waybill code to get full live timeline and status updates.</p>
+      <h1 class="text-2xl font-black text-brandNavy font-heading">Shipment Tracking Center</h1>
+      <p class="text-slate-600 text-xs">Enter your unique Booking Tracking Code (e.g. <strong>YR-A7F3B9</strong>) to view real-time courier status.</p>
     </div>
 
     <!-- Search Box Card -->
-    <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl border border-slate-200 mb-8">
-      <form id="tracking-page-form" class="flex flex-col sm:flex-row gap-4">
+    <div class="bg-white p-4 sm:p-5 rounded-xl shadow-sm border border-slate-200 mb-6 max-w-xl mx-auto">
+      <form method="GET" action="" class="flex flex-col sm:flex-row gap-2.5">
         <div class="relative flex-grow">
-          <i class="fa-solid fa-barcode absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
-          <input id="tracking-page-input" type="text" value="<?php echo htmlspecialchars($searchedTracking); ?>" placeholder="e.g. YCR-9824109 or EXP-77301" required class="w-full pl-12 pr-4 py-3.5 text-slate-900 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none text-sm font-semibold transition-all">
+          <i class="fa-solid fa-barcode absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+          <input type="text" name="id" value="<?= htmlspecialchars($searchQuery) ?>" 
+                 placeholder="Enter Booking ID (e.g. YR-A7F3B9)" required 
+                 class="w-full pl-9 pr-3 py-2 text-slate-900 rounded-lg bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none text-xs font-semibold transition-all uppercase">
         </div>
-        <button type="submit" class="bg-brandOrange hover:bg-orange-600 text-white font-bold py-3.5 px-8 rounded-xl transition-all flex items-center justify-center gap-2 text-sm shadow-md brand-glow-orange">
-          <i class="fa-solid fa-magnifying-glass"></i>
+        <button type="submit" 
+                class="bg-brandOrange hover:bg-orange-600 text-white font-bold py-2 px-5 rounded-lg transition-all flex items-center justify-center gap-1.5 text-xs shadow-sm brand-glow-orange">
+          <i class="fa-solid fa-magnifying-glass text-[11px]"></i>
           <span>Track</span>
         </button>
       </form>
-      
-      <!-- Quick Demo Badges -->
-      <div class="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-        <span>Try sample IDs:</span>
-        <button type="button" onclick="loadSampleTracking('YCR-9824109')" class="px-2.5 py-1 bg-slate-100 hover:bg-orange-100 hover:text-brandOrange rounded-md font-mono font-medium transition-colors">YCR-9824109</button>
-        <button type="button" onclick="loadSampleTracking('EXP-5541092')" class="px-2.5 py-1 bg-slate-100 hover:bg-orange-100 hover:text-brandOrange rounded-md font-mono font-medium transition-colors">EXP-5541092</button>
-      </div>
+
+      <?php if (!empty($_SESSION['user_id'])): ?>
+        <p class="text-center text-[11px] text-slate-400 mt-2.5">
+          Tip: You can also click <strong>"Track"</strong> directly on any row in your <a href="customer_dashboard.php" class="text-brandOrange font-bold hover:underline">Orders Dashboard</a>.
+        </p>
+      <?php endif; ?>
     </div>
 
-    <!-- Live Tracking Result Section (Dynamic UI) -->
-    <div id="tracking-result-card" class="bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden <?php echo empty($searchedTracking) ? 'hidden' : ''; ?>">
-      
-      <!-- Status Top Header -->
-      <div class="bg-gradient-to-r from-brandNavy to-slate-900 text-white p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <span class="text-xs text-brandOrange font-bold uppercase tracking-wider block mb-1">Waybill Tracking Number</span>
-          <h2 id="result-tracking-id" class="text-2xl font-black font-mono tracking-wide"><?php echo htmlspecialchars($searchedTracking ?: 'YCR-9824109'); ?></h2>
-          <p class="text-xs text-slate-300 mt-1 flex items-center gap-2">
-            <span><i class="fa-solid fa-box text-brandOrange"></i> Standard Parcel Express</span>
-            <span>•</span>
-            <span>Estimated Delivery: Today by 5:00 PM</span>
-          </p>
-        </div>
-        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold uppercase tracking-wider">
-          <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span id="result-status-text">Out for Delivery</span>
-        </div>
+    <!-- Error Alert -->
+    <?php if (!empty($error)): ?>
+      <div class="max-w-xl mx-auto bg-rose-50 border border-rose-200 text-rose-800 p-3 rounded-xl text-xs font-bold flex items-center gap-2 mb-6 shadow-sm">
+        <i class="fa-solid fa-circle-exclamation text-rose-600 text-sm"></i>
+        <span><?= htmlspecialchars($error) ?></span>
       </div>
+    <?php endif; ?>
 
-      <!-- Content Body: Timeline & Package Specs -->
-      <div class="p-6 sm:p-8 grid lg:grid-cols-12 gap-8">
+    <!-- Live Real Database Result Section -->
+    <?php if ($booking): ?>
+      <?php 
+        $status = strtolower($booking['status']);
+        $stepOrder = ['pending' => 1, 'dispatched' => 2, 'delivered' => 3, 'cancelled' => 0];
+        $currentStep = $stepOrder[$status] ?? 1;
+        $displayCode = !empty($booking['tracking_code']) ? $booking['tracking_code'] : ('YR-' . str_pad($booking['id'], 6, '0', STR_PAD_LEFT));
+      ?>
+
+      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
         
-        <!-- Left: Interactive Timeline -->
-        <div class="lg:col-span-7 space-y-6">
-          <h3 class="font-extrabold text-brandNavy text-base flex items-center gap-2">
-            <i class="fa-solid fa-timeline text-brandOrange"></i> Shipment Progress
-          </h3>
+        <!-- Status Top Header -->
+        <div class="bg-gradient-to-r from-brandNavy to-slate-900 text-white p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div>
+            <span class="text-[10px] text-brandOrange font-bold uppercase tracking-wider block mb-0.5">Waybill Tracking Code</span>
+            <h2 class="text-xl font-black font-mono tracking-wide text-white flex items-center gap-2">
+                <span><?= htmlspecialchars($displayCode) ?></span>
+            </h2>
+            <p class="text-xs text-slate-300 mt-1 flex flex-wrap items-center gap-2">
+              <span><i class="fa-solid fa-box text-brandOrange"></i> <?= htmlspecialchars($booking['service_name']) ?></span>
+              <span>•</span>
+              <span>Customer: <?= htmlspecialchars($booking['username']) ?></span>
+              <span>•</span>
+              <span>Booked: <?= date('M d, Y h:i A', strtotime($booking['created_at'])) ?></span>
+            </p>
+          </div>
 
-          <div class="relative pl-6 border-l-2 border-slate-200 space-y-8 ml-3">
-            
-            <!-- Checkpoint 4 (Active/Latest) -->
-            <div class="relative">
-              <div class="absolute -left-[31px] top-0 w-6 h-6 rounded-full bg-brandOrange text-white flex items-center justify-center text-xs shadow-md">
-                <i class="fa-solid fa-truck-fast"></i>
-              </div>
-              <p class="text-xs font-bold text-brandOrange uppercase">Out For Delivery</p>
-              <h4 class="text-sm font-extrabold text-brandNavy">Dispatched with Local Courier Team</h4>
-              <p class="text-xs text-slate-500 mt-0.5">Courier assigned: Michael S. (Vehicle Plate: NCF-8821)</p>
-              <span class="text-[11px] text-slate-400 font-medium mt-1 inline-block">Today - 09:15 AM • Central City Sorting Hub</span>
-            </div>
-
-            <!-- Checkpoint 3 -->
-            <div class="relative">
-              <div class="absolute -left-[31px] top-0 w-6 h-6 rounded-full bg-brandNavy text-white flex items-center justify-center text-xs shadow-md">
-                <i class="fa-solid fa-warehouse"></i>
-              </div>
-              <p class="text-xs font-bold text-slate-500 uppercase">Arrived at Destination Hub</p>
-              <h4 class="text-sm font-bold text-slate-800">Scanned at Primary Inbound Sorting Center</h4>
-              <span class="text-[11px] text-slate-400 font-medium mt-1 inline-block">Today - 04:30 AM • Inbound Facility Gate 4</span>
-            </div>
-
-            <!-- Checkpoint 2 -->
-            <div class="relative">
-              <div class="absolute -left-[31px] top-0 w-6 h-6 rounded-full bg-slate-300 text-slate-700 flex items-center justify-center text-xs">
-                <i class="fa-solid fa-plane"></i>
-              </div>
-              <p class="text-xs font-bold text-slate-500 uppercase">In Transit</p>
-              <h4 class="text-sm font-bold text-slate-800">Departed Origin Air Freight Terminal</h4>
-              <span class="text-[11px] text-slate-400 font-medium mt-1 inline-block">Yesterday - 10:45 PM • Flight EXP-902</span>
-            </div>
-
-            <!-- Checkpoint 1 -->
-            <div class="relative">
-              <div class="absolute -left-[31px] top-0 w-6 h-6 rounded-full bg-slate-300 text-slate-700 flex items-center justify-center text-xs">
-                <i class="fa-solid fa-box"></i>
-              </div>
-              <p class="text-xs font-bold text-slate-500 uppercase">Shipment Created</p>
-              <h4 class="text-sm font-bold text-slate-800">Parcel Picked Up by Sender & Barcode Generated</h4>
-              <span class="text-[11px] text-slate-400 font-medium mt-1 inline-block">Yesterday - 02:20 PM • Origin Branch</span>
-            </div>
-
+          <!-- Status Pill -->
+          <div>
+            <?php if ($status === 'delivered'): ?>
+              <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold uppercase tracking-wider">
+                <i class="fa-solid fa-circle-check"></i> Delivered Successfully
+              </span>
+            <?php elseif ($status === 'cancelled'): ?>
+              <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold uppercase tracking-wider">
+                <i class="fa-solid fa-circle-xmark"></i> Shipment Cancelled
+              </span>
+            <?php elseif ($status === 'dispatched'): ?>
+              <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 border border-blue-500/40 text-blue-300 text-xs font-bold uppercase tracking-wider">
+                <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span> In Transit / Dispatched
+              </span>
+            <?php else: ?>
+              <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold uppercase tracking-wider">
+                <i class="fa-solid fa-clock"></i> Order Pending Pickup
+              </span>
+            <?php endif; ?>
           </div>
         </div>
 
-        <!-- Right: Shipment Specs & Recipient Box -->
-        <div class="lg:col-span-5 space-y-4">
-          <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200 space-y-3 text-xs">
-            <h4 class="font-extrabold text-brandNavy uppercase tracking-wider text-xs border-b border-slate-200 pb-2">
-              Shipment Information
+        <!-- 3-Step Visual Progress Bar -->
+        <div class="p-6 sm:p-8 bg-slate-50/70 border-b border-slate-200">
+          <div class="grid grid-cols-3 gap-2 text-center text-xs font-bold">
+            <!-- Step 1 -->
+            <div class="space-y-2">
+              <div class="w-8 h-8 mx-auto rounded-full flex items-center justify-center <?= ($currentStep >= 1 && $status !== 'cancelled') ? 'bg-brandOrange text-white' : 'bg-slate-200 text-slate-500' ?> shadow-sm">
+                <i class="fa-solid fa-clipboard-check text-xs"></i>
+              </div>
+              <p class="<?= ($currentStep >= 1 && $status !== 'cancelled') ? 'text-brandNavy font-extrabold' : 'text-slate-400' ?>">1. Order Placed</p>
+              <p class="text-[10px] text-slate-500 font-normal">Pending courier pickup</p>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="space-y-2">
+              <div class="w-8 h-8 mx-auto rounded-full flex items-center justify-center <?= ($currentStep >= 2 && $status !== 'cancelled') ? 'bg-brandOrange text-white' : 'bg-slate-200 text-slate-500' ?> shadow-sm">
+                <i class="fa-solid fa-truck-fast text-xs"></i>
+              </div>
+              <p class="<?= ($currentStep >= 2 && $status !== 'cancelled') ? 'text-brandNavy font-extrabold' : 'text-slate-400' ?>">2. In Transit</p>
+              <p class="text-[10px] text-slate-500 font-normal">Dispatched with courier</p>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="space-y-2">
+              <div class="w-8 h-8 mx-auto rounded-full flex items-center justify-center <?= ($currentStep >= 3 && $status !== 'cancelled') ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-500' ?> shadow-sm">
+                <i class="fa-solid fa-house-circle-check text-xs"></i>
+              </div>
+              <p class="<?= ($currentStep >= 3 && $status !== 'cancelled') ? 'text-emerald-700 font-extrabold' : 'text-slate-400' ?>">3. Delivered</p>
+              <p class="text-[10px] text-slate-500 font-normal">Handed over to recipient</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Content Body: Delivery Details -->
+        <div class="p-6 sm:p-8 grid md:grid-cols-2 gap-6 text-xs">
+          
+          <!-- Origin & Destination Cards -->
+          <div class="space-y-4">
+            <h4 class="font-black text-brandNavy uppercase tracking-wider text-xs border-b border-slate-200 pb-2">
+              Route & Dispatch Information
             </h4>
             
-            <div class="flex justify-between py-1 border-b border-slate-100">
-              <span class="text-slate-500">Sender:</span>
-              <span class="font-bold text-slate-800">Apex Commercial Ltd.</span>
-            </div>
-            <div class="flex justify-between py-1 border-b border-slate-100">
-              <span class="text-slate-500">Destination:</span>
-              <span class="font-bold text-slate-800">Metro Hub, Office 402</span>
-            </div>
-            <div class="flex justify-between py-1 border-b border-slate-100">
-              <span class="text-slate-500">Weight & Volume:</span>
-              <span class="font-bold text-slate-800">2.4 kg (30x20x15 cm)</span>
-            </div>
-            <div class="flex justify-between py-1">
-              <span class="text-slate-500">Proof of Delivery:</span>
-              <span class="font-bold text-emerald-600">Signature Required</span>
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 space-y-3 shadow-sm">
+              <div class="flex items-start gap-3">
+                <div class="w-7 h-7 rounded-xl bg-orange-100 text-brandOrange flex items-center justify-center font-bold flex-shrink-0 mt-0.5">
+                  <i class="fa-solid fa-location-dot text-xs"></i>
+                </div>
+                <div>
+                  <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Pickup Address</span>
+                  <p class="font-bold text-slate-800 text-sm mt-0.5"><?= htmlspecialchars($booking['pickup_address']) ?></p>
+                </div>
+              </div>
+
+              <div class="border-t border-slate-100 pt-3 flex items-start gap-3">
+                <div class="w-7 h-7 rounded-xl bg-brandNavy/10 text-brandNavy flex items-center justify-center font-bold flex-shrink-0 mt-0.5">
+                  <i class="fa-solid fa-flag-checkered text-xs"></i>
+                </div>
+                <div>
+                  <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Delivery Destination</span>
+                  <p class="font-bold text-slate-800 text-sm mt-0.5"><?= htmlspecialchars($booking['delivery_address']) ?></p>
+                </div>
+              </div>
             </div>
           </div>
 
-          <!-- Help Callout -->
-          <div class="p-4 rounded-2xl bg-orange-50 border border-orange-200 text-xs space-y-2">
-            <p class="font-bold text-brandNavy flex items-center gap-1.5">
-              <i class="fa-solid fa-headset text-brandOrange"></i> Need to reschedule delivery?
-            </p>
-            <p class="text-slate-600">Call our direct dispatch hotline at <strong class="text-brandOrange">+1 (800) 555-YOCOR</strong> with your waybill number.</p>
+          <!-- Parcel Specifications -->
+          <div class="space-y-4">
+            <h4 class="font-black text-brandNavy uppercase tracking-wider text-xs border-b border-slate-200 pb-2">
+              Parcel & Service Specs
+            </h4>
+
+            <div class="bg-white p-4 rounded-2xl border border-slate-200 space-y-2.5 shadow-sm">
+              <div class="flex justify-between py-1 border-b border-slate-100">
+                <span class="text-slate-500">Service Category:</span>
+                <span class="font-bold text-slate-800"><?= htmlspecialchars($booking['service_name']) ?></span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-100">
+                <span class="text-slate-500">Total Weight:</span>
+                <span class="font-bold text-slate-800"><?= $booking['weight'] ?> kg</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-100">
+                <span class="text-slate-500">Dispatch Status:</span>
+                <span class="font-bold uppercase text-brandOrange"><?= htmlspecialchars($booking['status']) ?></span>
+              </div>
+              <div class="flex justify-between py-1">
+                <span class="text-slate-500">Last System Update:</span>
+                <span class="font-bold text-slate-700"><?= date('F d, Y - h:i A', strtotime($booking['created_at'])) ?></span>
+              </div>
+            </div>
+
+            <!-- Hotline Box -->
+            <div class="p-3.5 rounded-2xl bg-orange-50 border border-orange-200 text-xs flex items-center gap-3">
+              <i class="fa-solid fa-headset text-brandOrange text-xl"></i>
+              <div>
+                <p class="font-bold text-brandNavy">Need dispatch assistance?</p>
+                <p class="text-slate-600">Call 24/7 Dispatch Desk: <strong class="text-brandOrange">+1 (800) 555-YOCOR</strong></p>
+              </div>
+            </div>
           </div>
+
         </div>
 
       </div>
-    </div>
+    <?php endif; ?>
 
   </div>
 </main>
-
-<script>
-function loadSampleTracking(id) {
-  const input = document.getElementById('tracking-page-input');
-  if (input) {
-    input.value = id;
-    document.getElementById('tracking-page-form').dispatchEvent(new Event('submit'));
-  }
-}
-</script>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

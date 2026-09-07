@@ -36,28 +36,48 @@ document.addEventListener('DOMContentLoaded', () => {
   // Dynamic Rate Calculation formula
   const calcWeight = document.getElementById('calc-weight');
   const calcTier = document.getElementById('calc-tier');
+  const calcOriginRegion = document.getElementById('calc-origin-region');
+  const calcDestRegion = document.getElementById('calc-destination-region');
   const calcResultPrice = document.getElementById('calc-result-price');
+
+  function getRouteFee(origin, dest) {
+    const rates = window.regionalRates || { intra_island: 0, inter_island: 60, cross_island: 120 };
+    const o = (origin || '').toLowerCase();
+    const d = (dest || '').toLowerCase();
+    if (!o || !d || o === d) {
+      return rates.intra_island ?? 0;
+    }
+    if ((o === 'luzon' && d === 'mindanao') || (o === 'mindanao' && d === 'luzon')) {
+      return rates.cross_island ?? 120;
+    }
+    return rates.inter_island ?? 60;
+  }
 
   function calculateRate() {
     if (!calcWeight || !calcTier || !calcResultPrice) return;
     const weight = parseFloat(calcWeight.value) || 1.0;
     const tier = calcTier.value;
+    const originRegion = calcOriginRegion ? calcOriginRegion.value : 'Luzon';
+    const destRegion = calcDestRegion ? calcDestRegion.value : 'Luzon';
     
+    // Dynamic service pricing from DB (or sensible fallbacks)
+    const sRates = window.serviceRates || {};
     let baseRate = 100;
-    let multiplier = 50; // per kg
+    let multiplier = 40; // per kg
 
     if (tier === 'sameday') {
-      baseRate = 220;
-      multiplier = 80;
+      baseRate = sRates[3]?.base ?? 220;
+      multiplier = sRates[3]?.perKg ?? 80;
     } else if (tier === 'priority') {
-      baseRate = 150;
-      multiplier = 60;
+      baseRate = sRates[2]?.base ?? 150;
+      multiplier = sRates[2]?.perKg ?? 60;
     } else {
-      baseRate = 100;
-      multiplier = 40;
+      baseRate = sRates[1]?.base ?? 100;
+      multiplier = sRates[1]?.perKg ?? 40;
     }
 
-    const calculatedTotal = baseRate + (Math.max(0, weight - 1) * multiplier);
+    const regionalDistanceFee = getRouteFee(originRegion, destRegion);
+    const calculatedTotal = baseRate + (Math.max(0, weight - 1) * multiplier) + regionalDistanceFee;
     calcResultPrice.innerHTML = `₱${calculatedTotal.toFixed(2)} <span class="text-xs font-normal text-slate-500">PHP</span>`;
   }
 
@@ -65,6 +85,8 @@ document.addEventListener('DOMContentLoaded', () => {
     calcWeight.addEventListener('input', calculateRate);
     calcTier.addEventListener('change', calculateRate);
   }
+  if (calcOriginRegion) calcOriginRegion.addEventListener('change', calculateRate);
+  if (calcDestRegion) calcDestRegion.addEventListener('change', calculateRate);
 
   // Rate calculator parcel form submit
   const parcelForm = document.getElementById('rate-form-parcel');
@@ -72,7 +94,19 @@ document.addEventListener('DOMContentLoaded', () => {
     parcelForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const weightVal = calcWeight ? calcWeight.value : '1';
-      window.location.href = `booking.php?weight=${encodeURIComponent(weightVal)}&service=parcel`;
+      const tierVal = calcTier ? calcTier.value : 'priority';
+      const oReg = calcOriginRegion ? calcOriginRegion.value : 'Luzon';
+      const dReg = calcDestRegion ? calcDestRegion.value : 'Luzon';
+      const oAddr = document.getElementById('calc-origin') ? document.getElementById('calc-origin').value : '';
+      const dAddr = document.getElementById('calc-destination') ? document.getElementById('calc-destination').value : '';
+      
+      const bookingUrl = `booking.php?weight=${encodeURIComponent(weightVal)}&tier=${encodeURIComponent(tierVal)}&origin_region=${encodeURIComponent(oReg)}&dest_region=${encodeURIComponent(dReg)}&pickup=${encodeURIComponent(oAddr)}&delivery=${encodeURIComponent(dAddr)}`;
+
+      if (window.isLoggedIn) {
+        window.location.href = bookingUrl;
+      } else {
+        window.location.href = `login.php?redirect=${encodeURIComponent(bookingUrl)}`;
+      }
     });
   }
 

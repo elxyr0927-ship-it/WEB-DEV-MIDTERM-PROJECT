@@ -1,12 +1,12 @@
   <!-- GLOBAL FOOTER -->
-  <footer id="contact" class="bg-brandDark text-slate-400 py-16 border-t border-slate-800 mt-auto">
+  <footer id="contact" class="bg-brandDark text-slate-400 py-10 border-t border-slate-800 mt-auto">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         
-        <div class="space-y-4">
+        <div class="space-y-3">
           <!-- White Version of SVG Logo for Dark Footer -->
-          <div class="bg-white/10 p-3 rounded-lg inline-block">
-            <svg class="h-9 w-auto" viewBox="0 0 301.18 68.85" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <div class="bg-white/10 p-2.5 rounded-lg inline-block">
+            <svg class="h-7 w-auto" viewBox="0 0 301.18 68.85" fill="none" xmlns="http://www.w3.org/2000/svg">
               <g id="Layer_1-2" data-name="Layer 1">
                 <g>
                   <polygon fill="#F37B23" points="238.21 13.97 240.29 18.06 244.96 18.72 241.58 21.9 242.38 26.4 238.21 24.28 234.04 26.4 234.84 21.9 231.46 18.72 236.13 18.06 238.21 13.97"/>
@@ -50,8 +50,8 @@
         </div>
 
         <div>
-          <h4 class="text-white font-bold text-sm mb-4 uppercase tracking-wider">Quick Services</h4>
-          <ul class="space-y-2 text-xs">
+          <h4 class="text-white font-bold text-xs mb-3 uppercase tracking-wider">Quick Services</h4>
+          <ul class="space-y-1.5 text-xs">
             <li><a href="services.php" class="hover:text-brandOrange transition-colors">Express Door-to-Door</a></li>
             <li><a href="services.php" class="hover:text-brandOrange transition-colors">Freight Forwarding</a></li>
             <li><a href="services.php" class="hover:text-brandOrange transition-colors">Warehousing & Storage</a></li>
@@ -60,8 +60,8 @@
         </div>
 
         <div>
-          <h4 class="text-white font-bold text-sm mb-4 uppercase tracking-wider">Navigation</h4>
-          <ul class="space-y-2 text-xs">
+          <h4 class="text-white font-bold text-xs mb-3 uppercase tracking-wider">Navigation</h4>
+          <ul class="space-y-1.5 text-xs">
             <li><a href="tracking.php" class="hover:text-brandOrange transition-colors">Track Shipment</a></li>
             <li><a href="quote.php" class="hover:text-brandOrange transition-colors">Shipping Calculator</a></li>
             <li><a href="booking.php" class="hover:text-brandOrange transition-colors">Book Delivery</a></li>
@@ -70,8 +70,8 @@
         </div>
 
         <div>
-          <h4 class="text-white font-bold text-sm mb-4 uppercase tracking-wider">Contact & Dispatch</h4>
-          <ul class="space-y-2 text-xs">
+          <h4 class="text-white font-bold text-xs mb-3 uppercase tracking-wider">Contact & Dispatch</h4>
+          <ul class="space-y-1.5 text-xs">
             <li class="flex items-center gap-2"><i class="fa-solid fa-location-dot text-brandOrange"></i> Global Logistics Operations Center</li>
             <li class="flex items-center gap-2"><i class="fa-solid fa-phone text-brandOrange"></i> +1 (800) 555-YOCOR</li>
             <li class="flex items-center gap-2"><i class="fa-solid fa-envelope text-brandOrange"></i> dispatch@yocorexpress.com</li>
@@ -81,16 +81,48 @@
 
       </div>
 
-      <div class="pt-8 border-t border-slate-800 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500 gap-4">
+      <div class="pt-6 border-t border-slate-800 flex flex-col md:flex-row items-center justify-between text-[11px] text-slate-500 gap-3">
         <p>&copy; <?php echo date('Y'); ?> YOCOR Express Logistic. All rights reserved.</p>
         <div class="flex space-x-6">
-          <a href="contact.php" class="hover:text-slate-400">Privacy Policy</a>
-          <a href="contact.php" class="hover:text-slate-400">Terms of Service</a>
-          <a href="contact.php" class="hover:text-slate-400">Security & Compliance</a>
+          <a href="security.php" class="hover:text-slate-400">Privacy Policy</a>
+          <a href="terms.php" class="hover:text-slate-400">Terms of Service</a>
+          <a href="security.php" class="hover:text-slate-400">Security & Compliance</a>
         </div>
       </div>
     </div>
   </footer>
+
+  <!-- Session & Regional Pricing State for Client-Side Scripting -->
+  <script>
+    window.isLoggedIn = <?= isset($_SESSION['user_id']) ? 'true' : 'false' ?>;
+    <?php
+      if (function_exists('getConnection')) {
+          try {
+              $f_pdo = getConnection();
+              if (function_exists('getRegionalRates')) {
+                  $f_rates = getRegionalRates($f_pdo);
+                  echo "window.regionalRates = " . json_encode($f_rates) . ";\n";
+              }
+              $f_services = $f_pdo->query("SELECT id, name, base_price, price_per_kg FROM services")->fetchAll(PDO::FETCH_ASSOC);
+              $f_serviceMap = [];
+              foreach ($f_services as $fs) {
+                  $f_serviceMap[$fs['id']] = [
+                      'name' => $fs['name'],
+                      'base' => (float)$fs['base_price'],
+                      'perKg' => (float)$fs['price_per_kg']
+                  ];
+              }
+              echo "window.serviceRates = " . json_encode($f_serviceMap) . ";\n";
+          } catch (Exception $e) {
+              echo "window.regionalRates = { intra_island: 0, inter_island: 60, cross_island: 120 };\n";
+              echo "window.serviceRates = { 1: { base: 100, perKg: 40 }, 2: { base: 150, perKg: 60 }, 3: { base: 220, perKg: 80 } };\n";
+          }
+      } else {
+          echo "window.regionalRates = { intra_island: 0, inter_island: 60, cross_island: 120 };\n";
+          echo "window.serviceRates = { 1: { base: 100, perKg: 40 }, 2: { base: 150, perKg: 60 }, 3: { base: 220, perKg: 80 } };\n";
+      }
+    ?>
+  </script>
 
   <!-- External JavaScript -->
   <script src="assets/js/script.js"></script>
