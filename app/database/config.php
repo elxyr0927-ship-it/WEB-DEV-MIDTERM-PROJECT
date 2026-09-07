@@ -4,7 +4,7 @@
 function getConnection(): PDO
 {
     $host = 'localhost';
-    $db   = 'school_db';
+    $db   = 'yocor_express';
     $user = 'root';
     $pass = 'root';
 
