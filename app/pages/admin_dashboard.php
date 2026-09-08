@@ -248,21 +248,46 @@ $paymentMethodSuccess = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_payment_methods']) && empty($error)) {
     try {
         $allMethods = getPaymentMethods($pdo, false);
-        $updatedMethodsCount = 0;
+        $methodErrors = [];
+
+        // Validate lengths
         foreach ($allMethods as $pm) {
             $code = $pm['method_code'];
-            $data = [
-                'account_name'   => trim($_POST['account_name_' . $code] ?? ''),
-                'account_number' => trim($_POST['account_number_' . $code] ?? ''),
-                'instructions'   => trim($_POST['instructions_' . $code] ?? ''),
-                'is_active'      => isset($_POST['is_active_' . $code]) ? 1 : 0
-            ];
-            if (updatePaymentMethod($pdo, $code, $data)) {
-                $updatedMethodsCount++;
+            $accName = trim($_POST['account_name_' . $code] ?? '');
+            $accNum = trim($_POST['account_number_' . $code] ?? '');
+            $instr = trim($_POST['instructions_' . $code] ?? '');
+
+            if (!empty($accName)) {
+                $methodErrors[] = validateStringLength($accName, "Account Name ($code)", 100);
+            }
+            if (!empty($accNum)) {
+                $methodErrors[] = validateStringLength($accNum, "Account Number ($code)", 50);
+            }
+            if (!empty($instr)) {
+                $methodErrors[] = validateStringLength($instr, "Instructions ($code)", 2000);
             }
         }
-        $paymentMethodSuccess = "Payment methods successfully updated ($updatedMethodsCount methods configured).";
-        logAdminAction($pdo, (int)$_SESSION['user_id'], 'UPDATE_PAYMENT_METHODS', "Updated payment methods settings");
+
+        $cleanMethodErrors = array_filter($methodErrors);
+        if (!empty($cleanMethodErrors)) {
+            $error = reset($cleanMethodErrors);
+        } else {
+            $updatedMethodsCount = 0;
+            foreach ($allMethods as $pm) {
+                $code = $pm['method_code'];
+                $data = [
+                    'account_name'   => sanitizeString($_POST['account_name_' . $code] ?? ''),
+                    'account_number' => sanitizeString($_POST['account_number_' . $code] ?? ''),
+                    'instructions'   => sanitizeString($_POST['instructions_' . $code] ?? ''),
+                    'is_active'      => isset($_POST['is_active_' . $code]) ? 1 : 0
+                ];
+                if (updatePaymentMethod($pdo, $code, $data)) {
+                    $updatedMethodsCount++;
+                }
+            }
+            $paymentMethodSuccess = "Payment methods successfully updated ($updatedMethodsCount methods configured).";
+            logAdminAction($pdo, (int)$_SESSION['user_id'], 'UPDATE_PAYMENT_METHODS', "Updated payment methods settings");
+        }
     } catch (Exception $e) {
         error_log("Payment methods update error: " . $e->getMessage());
         $error = 'Failed to update payment methods: ' . $e->getMessage();
@@ -968,6 +993,13 @@ include __DIR__ . '/../includes/header.php';
                                                target="_blank" title="View Waybill Receipt">
                                                 <i class="fa-solid fa-receipt text-[10px] text-brandOrange"></i>
                                                 <span>Receipt</span>
+                                            </a>
+
+                                            <a href="admin_booking_timeline.php?id=<?= (int)$booking['id'] ?>" 
+                                               class="inline-flex items-center gap-1 text-[11px] text-blue-700 hover:text-blue-900 font-bold px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors"
+                                               target="_blank" title="Manage Live Checkpoints & Audit Timeline">
+                                                <i class="fa-solid fa-timeline text-[10px] text-blue-600"></i>
+                                                <span>Checkpoints</span>
                                             </a>
 
                                             <a href="tracking.php?id=<?= urlencode($booking['tracking_code'] ?? $booking['id']) ?>" 

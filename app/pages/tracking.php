@@ -220,26 +220,33 @@ include __DIR__ . '/../includes/header.php';
 
         <!-- Checkpoint & Live Notes Banner -->
         <?php if (!empty($booking['current_checkpoint']) || !empty($booking['tracker_notes'])): ?>
-          <div class="bg-blue-50/70 border-b border-blue-200/80 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
-            <div class="space-y-1">
+          <div class="bg-blue-50/80 border-b border-blue-200/80 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div class="space-y-1.5">
               <?php if (!empty($booking['current_checkpoint'])): ?>
-                <div class="flex items-center gap-2">
-                  <span class="font-bold text-blue-900 uppercase tracking-wider text-[10px] bg-blue-100 px-2 py-0.5 rounded">Current Location:</span>
-                  <span class="font-extrabold text-blue-950 text-sm flex items-center gap-1.5">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="font-extrabold text-blue-900 uppercase tracking-wider text-[10px] bg-blue-100 px-2 py-0.5 rounded flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span>Live Hub Location:</span>
+                  </span>
+                  <span class="font-extrabold text-brandNavy text-sm flex items-center gap-1.5">
                     <i class="fa-solid fa-location-dot text-brandOrange"></i>
                     <?= htmlspecialchars($booking['current_checkpoint']) ?>
                   </span>
                 </div>
               <?php endif; ?>
               <?php if (!empty($booking['tracker_notes'])): ?>
-                <p class="text-blue-800 text-xs italic">
-                  &ldquo;<?= htmlspecialchars($booking['tracker_notes']) ?>&rdquo;
+                <p class="text-blue-950 text-xs italic font-medium flex items-start gap-1.5">
+                  <i class="fa-solid fa-quote-left text-[10px] text-blue-400 mt-1"></i>
+                  <span><?= htmlspecialchars($booking['tracker_notes']) ?></span>
                 </p>
               <?php endif; ?>
             </div>
-            <span class="text-[10px] text-blue-600 font-semibold bg-white px-2.5 py-1 rounded-full border border-blue-200">
-              Live Courier Feed
-            </span>
+            <div class="flex-shrink-0 flex items-center gap-2">
+              <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                <span>Active Live Feed</span>
+              </span>
+            </div>
           </div>
         <?php endif; ?>
 
@@ -279,24 +286,59 @@ include __DIR__ . '/../includes/header.php';
             <!-- Status Timeline -->
             <?php if (!empty($statusHistory)): ?>
               <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                <h5 class="font-black text-brandNavy uppercase tracking-wider text-[11px] border-b border-slate-100 pb-2">
-                  <i class="fa-solid fa-clock-rotate-left text-brandOrange mr-1"></i> Audit Status Timeline
-                </h5>
-                <ol class="relative border-l border-slate-200 ml-2.5 space-y-3 text-xs">
-                  <?php foreach ($statusHistory as $h): ?>
+                <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <h5 class="font-black text-brandNavy uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                    <i class="fa-solid fa-clock-rotate-left text-brandOrange"></i>
+                    <span>Live Audit Status Timeline</span>
+                  </h5>
+                  <span class="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                    <?= count($statusHistory) ?> events
+                  </span>
+                </div>
+
+                <ol class="relative border-l border-slate-200 ml-2.5 space-y-3.5 text-xs">
+                  <?php foreach ($statusHistory as $h): 
+                    $isStatusChange = ($h['old_status'] !== $h['new_status']);
+                    $isCheckpoint = !empty($h['checkpoint']) || (!empty($h['notes']) && !$isStatusChange);
+                  ?>
                     <li class="ml-4">
-                      <div class="absolute -left-1.5 mt-1.5 w-3 h-3 rounded-full border-2 border-white bg-brandOrange"></div>
-                      <time class="mb-0.5 text-[10px] font-normal leading-none text-slate-400 block">
-                        <?= date('M d, Y - h:i A', strtotime($h['created_at'])) ?>
-                      </time>
-                      <h6 class="font-extrabold text-slate-900 text-xs">
-                        <?= ucfirst(htmlspecialchars($h['new_status'])) ?>
-                      </h6>
-                      <?php if (!empty($h['checkpoint'])): ?>
-                        <p class="text-[11px] text-brandNavy font-semibold">Checkpoint: <?= htmlspecialchars($h['checkpoint']) ?></p>
+                      <div class="absolute -left-1.5 mt-1 w-3 h-3 rounded-full border-2 border-white <?= $isStatusChange ? 'bg-blue-600' : 'bg-emerald-500' ?> shadow-2xs"></div>
+                      
+                      <div class="flex flex-wrap items-center gap-2 mb-0.5">
+                        <time class="text-[10px] font-semibold text-slate-400 block font-mono">
+                          <?= date('M d, Y - h:i A', strtotime($h['created_at'])) ?>
+                        </time>
+                        <?php if ($isCheckpoint): ?>
+                          <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 font-extrabold text-[9px] border border-emerald-200">
+                            <i class="fa-solid fa-location-dot text-[8px]"></i> Checkpoint
+                          </span>
+                        <?php elseif ($isStatusChange): ?>
+                          <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 font-extrabold text-[9px] border border-blue-200">
+                            <i class="fa-solid fa-arrows-rotate text-[8px]"></i> Status
+                          </span>
+                        <?php endif; ?>
+                      </div>
+
+                      <?php if ($isStatusChange): ?>
+                        <h6 class="font-extrabold text-slate-900 text-xs flex items-center gap-1.5 mt-0.5">
+                          <span class="uppercase text-slate-500"><?= ucfirst(htmlspecialchars($h['old_status'])) ?></span>
+                          <i class="fa-solid fa-arrow-right text-slate-300 text-[10px]"></i>
+                          <span class="uppercase text-brandOrange"><?= ucfirst(htmlspecialchars($h['new_status'])) ?></span>
+                        </h6>
                       <?php endif; ?>
+
+                      <?php if (!empty($h['checkpoint'])): ?>
+                        <div class="text-[11px] text-brandNavy font-extrabold flex items-center gap-1.5 mt-0.5">
+                          <i class="fa-solid fa-location-dot text-brandOrange text-[11px]"></i>
+                          <span><?= htmlspecialchars($h['checkpoint']) ?></span>
+                        </div>
+                      <?php endif; ?>
+
                       <?php if (!empty($h['notes'])): ?>
-                        <p class="text-[11px] text-slate-500 mt-0.5"><?= htmlspecialchars($h['notes']) ?></p>
+                        <p class="text-[11px] text-slate-600 italic mt-1 bg-slate-50 p-2 rounded-lg border border-slate-200/60 flex items-start gap-1">
+                          <i class="fa-solid fa-quote-left text-[9px] text-slate-400 mt-0.5 flex-shrink-0"></i>
+                          <span><?= htmlspecialchars($h['notes']) ?></span>
+                        </p>
                       <?php endif; ?>
                     </li>
                   <?php endforeach; ?>

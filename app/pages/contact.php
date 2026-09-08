@@ -31,16 +31,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_contact_message'
             $contactError = reset($cleanErrs);
         } else {
             try {
-                $finalSubject = $subject . (!empty($trackingId) ? " [Ref: {$trackingId}]" : "");
+                $finalSubject = $subject . (!empty($trackingId) ? " [Ref: " . trim($trackingId) . "]" : "");
+                
+                // Sanitize input data
+                $cleanName = sanitizeString($name);
+                $cleanEmail = sanitizeEmail($email);
+                $cleanSubject = sanitizeString($finalSubject);
+                $cleanMessage = sanitizeString($message);
+
                 $stmt = $pdo->prepare("
                     INSERT INTO contact_messages (name, email, subject, message, is_read, created_at) 
                     VALUES (:name, :email, :subject, :message, 0, NOW())
                 ");
                 $stmt->execute([
-                    'name'    => $name,
-                    'email'   => $email,
-                    'subject' => $finalSubject,
-                    'message' => $message
+                    'name'    => $cleanName,
+                    'email'   => $cleanEmail,
+                    'subject' => $cleanSubject,
+                    'message' => $cleanMessage
                 ]);
                 $contactSuccess = "Thank you, {$name}! Your message has been safely received. A support specialist will follow up at {$email} shortly.";
             } catch (PDOException $e) {

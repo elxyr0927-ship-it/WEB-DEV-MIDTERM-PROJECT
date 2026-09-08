@@ -106,3 +106,43 @@ function validateStudentInput(array $post): array
     ];
 }
 
+/**
+ * Universal Sanitization Helpers
+ */
+function sanitizeString(?string $value): string
+{
+    return htmlspecialchars(trim($value ?? ''), ENT_QUOTES, 'UTF-8');
+}
+
+function sanitizeEmail(?string $value): string
+{
+    return filter_var(trim($value ?? ''), FILTER_SANITIZE_EMAIL);
+}
+
+function validateAlphanumeric(?string $value, string $label, string $extraChars = '-_#'): ?string
+{
+    $val = trim($value ?? '');
+    if ($val === '') {
+        return null;
+    }
+    $escapedExtra = preg_quote($extraChars, '/');
+    if (!preg_match("/^[a-zA-Z0-9{$escapedExtra}]+$/", $val)) {
+        return "$label may only contain alphanumeric characters and ($extraChars).";
+    }
+    return null;
+}
+
+function validatePhoneNumber(?string $value, string $label): ?string
+{
+    $val = trim($value ?? '');
+    if ($val === '') {
+        return null;
+    }
+    // Accommodates Philippine mobile numbers (e.g. 09171234567, +639171234567, 0917-123-4567)
+    $cleanNumber = preg_replace('/[\s\-\(\)]+/', '', $val);
+    if (!preg_match('/^(\+?63|0)?9\d{9}$/', $cleanNumber) && !preg_match('/^\d{4,15}$/', $cleanNumber)) {
+        return "$label must be a valid contact or card identification number.";
+    }
+    return null;
+}
+

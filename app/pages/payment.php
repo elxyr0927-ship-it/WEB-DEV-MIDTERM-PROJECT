@@ -69,9 +69,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_payment'])) {
             $accountNumber = trim($_POST['account_number'] ?? '');
             $paymentReference = trim($_POST['payment_reference'] ?? '');
 
-            if ($paymentMethod !== 'cod' && empty($paymentReference)) {
-                $error = 'Please enter the transaction reference number provided by your payment provider.';
+            $errs = [];
+
+            // Reference ID validation
+            if ($paymentMethod !== 'cod') {
+                $errs[] = validateRequired($paymentReference, 'Payment Reference / Transaction ID');
+                $errs[] = validateStringLength($paymentReference, 'Payment Reference', 100, 3);
+                $errs[] = validateAlphanumeric($paymentReference, 'Payment Reference', '-_#');
+            }
+
+            // Optional account details validation
+            if (!empty($accountName)) {
+                $errs[] = validateStringLength($accountName, 'Sender Account Name', 100);
+            }
+            if (!empty($accountNumber)) {
+                $errs[] = validateStringLength($accountNumber, 'Sender Mobile / Card Number', 50);
+                $errs[] = validatePhoneNumber($accountNumber, 'Sender Mobile / Card Number');
+            }
+
+            $cleanErrs = array_filter($errs);
+            if (!empty($cleanErrs)) {
+                $error = reset($cleanErrs);
             } else {
+                // Sanitize fields before binding
+                $cleanAccName = !empty($accountName) ? sanitizeString($accountName) : null;
+                $cleanAccNum = !empty($accountNumber) ? sanitizeString($accountNumber) : null;
+                $cleanRef = !empty($paymentReference) ? sanitizeString($paymentReference) : null;
+
                 try {
                     $pdo->beginTransaction();
 
@@ -88,9 +112,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_payment'])) {
                     ");
                     $updateStmt->execute([
                         'method' => $paymentMethod,
-                        'acc_name' => !empty($accountName) ? $accountName : null,
-                        'acc_num' => !empty($accountNumber) ? $accountNumber : null,
-                        'ref' => !empty($paymentReference) ? $paymentReference : null,
+                        'acc_name' => $cleanAccName,
+                        'acc_num' => $cleanAccNum,
+                        'ref' => $cleanRef,
                         'id' => $booking['id'],
                         'user_id' => $_SESSION['user_id']
                     ]);

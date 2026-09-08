@@ -44,6 +44,7 @@ $routes = [
     'terms'              => __DIR__ . '/app/pages/terms.php',
     'security'           => __DIR__ . '/app/pages/security.php',
     'admin_inquiries'    => __DIR__ . '/app/pages/admin_inquiries.php',
+    'admin_booking_timeline' => __DIR__ . '/app/pages/admin_booking_timeline.php',
 ];
 
 // If requesting a specific page from the route whitelist, load it

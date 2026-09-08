@@ -94,6 +94,10 @@ if (empty($errors)) {
         // Generate unique tracking code (e.g. YR-A7F3B9)
         $tracking_code = generateTrackingCode($pdo);
 
+        // Sanitize string addresses prior to storage
+        $cleanPickup = sanitizeString($pickup);
+        $cleanDelivery = sanitizeString($delivery);
+
         // Insert booking with total_cost, pickup_region, delivery_region, and payment_status='unpaid'
         $stmt = $pdo->prepare("
             INSERT INTO bookings (tracking_code, user_id, service_id, pickup_region, delivery_region, pickup_address, delivery_address, weight, status, payment_status, total_cost) 
@@ -105,8 +109,8 @@ if (empty($errors)) {
             'service_id' => $service_id,
             'pickup_region' => $pickup_region,
             'delivery_region' => $delivery_region,
-            'pickup' => $pickup,
-            'delivery' => $delivery,
+            'pickup' => $cleanPickup,
+            'delivery' => $cleanDelivery,
             'weight' => $weight,
             'total_cost' => $total_cost
         ]);
