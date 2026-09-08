@@ -31,7 +31,18 @@ if (!empty($searchQuery)) {
             $booking = $stmt->fetch(PDO::FETCH_ASSOC);
         }
 
-        if (!$booking) {
+        if ($booking) {
+            // Fetch status audit history timeline
+            $hStmt = $pdo->prepare("
+                SELECT h.*, u.username AS changer_name 
+                FROM status_history h 
+                LEFT JOIN user u ON h.changed_by = u.id 
+                WHERE h.booking_id = :b_id 
+                ORDER BY h.created_at ASC
+            ");
+            $hStmt->execute(['b_id' => $booking['id']]);
+            $statusHistory = $hStmt->fetchAll(PDO::FETCH_ASSOC);
+        } else {
             $error = "No shipment found matching Booking Code or ID '" . htmlspecialchars($searchQuery) . "'. Please verify your tracking code and try again.";
         }
     } catch (PDOException $e) {
@@ -112,31 +123,72 @@ include __DIR__ . '/../includes/header.php';
             </p>
           </div>
 
-          <!-- Status Pill -->
-          <div>
-            <?php if ($status === 'delivered'): ?>
-              <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold uppercase tracking-wider">
-                <i class="fa-solid fa-circle-check"></i> Delivered Successfully
+          <!-- Status Pill & Payment Info -->
+          <div class="flex flex-wrap items-center gap-2">
+            <?php if (($booking['payment_status'] ?? 'unpaid') === 'paid'): ?>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-bold">
+                <i class="fa-solid fa-circle-check text-xs"></i> Paid
               </span>
-            <?php elseif ($status === 'cancelled'): ?>
-              <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold uppercase tracking-wider">
-                <i class="fa-solid fa-circle-xmark"></i> Shipment Cancelled
-              </span>
-            <?php elseif ($status === 'dispatched'): ?>
-              <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 border border-blue-500/40 text-blue-300 text-xs font-bold uppercase tracking-wider">
-                <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span> In Transit / Dispatched
+            <?php elseif (($booking['payment_status'] ?? 'unpaid') === 'under_review'): ?>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30 text-xs font-bold">
+                <i class="fa-solid fa-hourglass-half text-xs"></i> Payment Under Review
               </span>
             <?php else: ?>
-              <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold uppercase tracking-wider">
-                <i class="fa-solid fa-clock"></i> Order Pending Pickup
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/30 text-xs font-bold">
+                <i class="fa-solid fa-clock text-xs"></i> Awaiting Payment
+              </span>
+              <?php if (isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] === (int)$booking['user_id']): ?>
+                <a href="payment.php?id=<?= $booking['id'] ?>" class="bg-brandOrange hover:bg-orange-600 text-white font-bold text-xs px-3 py-1 rounded-lg transition-colors shadow">
+                  Pay Now
+                </a>
+              <?php endif; ?>
+            <?php endif; ?>
+
+            <?php if ($status === 'delivered'): ?>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold uppercase tracking-wider">
+                <i class="fa-solid fa-circle-check"></i> Delivered
+              </span>
+            <?php elseif ($status === 'cancelled'): ?>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold uppercase tracking-wider">
+                <i class="fa-solid fa-circle-xmark"></i> Cancelled
+              </span>
+            <?php elseif ($status === 'dispatched'): ?>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/40 text-blue-300 text-xs font-bold uppercase tracking-wider">
+                <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span> In Transit
+              </span>
+            <?php else: ?>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold uppercase tracking-wider">
+                <i class="fa-solid fa-clock"></i> Order Pending
               </span>
             <?php endif; ?>
           </div>
         </div>
 
-        <!-- 3-Step Visual Progress Bar -->
-        <div class="p-6 sm:p-8 bg-slate-50/70 border-b border-slate-200">
-          <div class="grid grid-cols-3 gap-2 text-center text-xs font-bold">
+        <?php if (($booking['payment_status'] ?? 'unpaid') === 'under_review'): ?>
+          <div class="bg-blue-50 border-b border-blue-200 px-5 py-3 text-blue-950 text-xs flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2 font-medium">
+              <i class="fa-solid fa-hourglass-half text-blue-600 text-sm"></i>
+              <span><strong>Notice:</strong> Payment has been submitted and is awaiting confirmation by an administrator. Courier dispatch unlocks upon confirmation.</span>
+            </div>
+          </div>
+        <?php elseif (($booking['payment_status'] ?? 'unpaid') !== 'paid'): ?>
+          <div class="bg-amber-50 border-b border-amber-200 px-5 py-3 text-amber-900 text-xs flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2 font-medium">
+              <i class="fa-solid fa-triangle-exclamation text-amber-600 text-sm"></i>
+              <span><strong>Notice:</strong> This order is unpaid. Parcels will only be dispatched once settlement has been cleared.</span>
+            </div>
+            <?php if (isset($_SESSION['user_id']) && (int)$_SESSION['user_id'] === (int)$booking['user_id']): ?>
+              <a href="payment.php?id=<?= $booking['id'] ?>" class="text-brandOrange hover:underline font-bold whitespace-nowrap">
+                Complete Payment &rarr;
+              </a>
+            <?php endif; ?>
+          </div>
+        <?php endif; ?>
+
+        <!-- Progress Stepper Indicator -->
+        <div class="p-6 bg-slate-50 border-b border-slate-200">
+          <div class="max-w-2xl mx-auto grid grid-cols-3 gap-2 text-center text-xs font-bold relative">
+            
             <!-- Step 1 -->
             <div class="space-y-2">
               <div class="w-8 h-8 mx-auto rounded-full flex items-center justify-center <?= ($currentStep >= 1 && $status !== 'cancelled') ? 'bg-brandOrange text-white' : 'bg-slate-200 text-slate-500' ?> shadow-sm">
@@ -166,6 +218,31 @@ include __DIR__ . '/../includes/header.php';
           </div>
         </div>
 
+        <!-- Checkpoint & Live Notes Banner -->
+        <?php if (!empty($booking['current_checkpoint']) || !empty($booking['tracker_notes'])): ?>
+          <div class="bg-blue-50/70 border-b border-blue-200/80 px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div class="space-y-1">
+              <?php if (!empty($booking['current_checkpoint'])): ?>
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-blue-900 uppercase tracking-wider text-[10px] bg-blue-100 px-2 py-0.5 rounded">Current Location:</span>
+                  <span class="font-extrabold text-blue-950 text-sm flex items-center gap-1.5">
+                    <i class="fa-solid fa-location-dot text-brandOrange"></i>
+                    <?= htmlspecialchars($booking['current_checkpoint']) ?>
+                  </span>
+                </div>
+              <?php endif; ?>
+              <?php if (!empty($booking['tracker_notes'])): ?>
+                <p class="text-blue-800 text-xs italic">
+                  &ldquo;<?= htmlspecialchars($booking['tracker_notes']) ?>&rdquo;
+                </p>
+              <?php endif; ?>
+            </div>
+            <span class="text-[10px] text-blue-600 font-semibold bg-white px-2.5 py-1 rounded-full border border-blue-200">
+              Live Courier Feed
+            </span>
+          </div>
+        <?php endif; ?>
+
         <!-- Content Body: Delivery Details -->
         <div class="p-6 sm:p-8 grid md:grid-cols-2 gap-6 text-xs">
           
@@ -183,6 +260,7 @@ include __DIR__ . '/../includes/header.php';
                 <div>
                   <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Pickup Address</span>
                   <p class="font-bold text-slate-800 text-sm mt-0.5"><?= htmlspecialchars($booking['pickup_address']) ?></p>
+                  <span class="text-[10px] text-brandOrange font-semibold"><?= htmlspecialchars($booking['pickup_region'] ?? 'Luzon') ?></span>
                 </div>
               </div>
 
@@ -193,9 +271,38 @@ include __DIR__ . '/../includes/header.php';
                 <div>
                   <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Delivery Destination</span>
                   <p class="font-bold text-slate-800 text-sm mt-0.5"><?= htmlspecialchars($booking['delivery_address']) ?></p>
+                  <span class="text-[10px] text-brandOrange font-semibold"><?= htmlspecialchars($booking['delivery_region'] ?? 'Luzon') ?></span>
                 </div>
               </div>
             </div>
+
+            <!-- Status Timeline -->
+            <?php if (!empty($statusHistory)): ?>
+              <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                <h5 class="font-black text-brandNavy uppercase tracking-wider text-[11px] border-b border-slate-100 pb-2">
+                  <i class="fa-solid fa-clock-rotate-left text-brandOrange mr-1"></i> Audit Status Timeline
+                </h5>
+                <ol class="relative border-l border-slate-200 ml-2.5 space-y-3 text-xs">
+                  <?php foreach ($statusHistory as $h): ?>
+                    <li class="ml-4">
+                      <div class="absolute -left-1.5 mt-1.5 w-3 h-3 rounded-full border-2 border-white bg-brandOrange"></div>
+                      <time class="mb-0.5 text-[10px] font-normal leading-none text-slate-400 block">
+                        <?= date('M d, Y - h:i A', strtotime($h['created_at'])) ?>
+                      </time>
+                      <h6 class="font-extrabold text-slate-900 text-xs">
+                        <?= ucfirst(htmlspecialchars($h['new_status'])) ?>
+                      </h6>
+                      <?php if (!empty($h['checkpoint'])): ?>
+                        <p class="text-[11px] text-brandNavy font-semibold">Checkpoint: <?= htmlspecialchars($h['checkpoint']) ?></p>
+                      <?php endif; ?>
+                      <?php if (!empty($h['notes'])): ?>
+                        <p class="text-[11px] text-slate-500 mt-0.5"><?= htmlspecialchars($h['notes']) ?></p>
+                      <?php endif; ?>
+                    </li>
+                  <?php endforeach; ?>
+                </ol>
+              </div>
+            <?php endif; ?>
           </div>
 
           <!-- Parcel Specifications -->
@@ -212,6 +319,16 @@ include __DIR__ . '/../includes/header.php';
               <div class="flex justify-between py-1 border-b border-slate-100">
                 <span class="text-slate-500">Total Weight:</span>
                 <span class="font-bold text-slate-800"><?= $booking['weight'] ?> kg</span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-100">
+                <span class="text-slate-500">Total Freight Cost:</span>
+                <span class="font-extrabold text-brandOrange">₱<?= number_format((float)($booking['total_cost'] ?? 0), 2) ?></span>
+              </div>
+              <div class="flex justify-between py-1 border-b border-slate-100">
+                <span class="text-slate-500">Payment Status:</span>
+                <span class="font-bold <?= ($booking['payment_status'] ?? 'unpaid') === 'paid' ? 'text-emerald-600' : 'text-amber-600' ?>">
+                  <?= strtoupper(htmlspecialchars($booking['payment_status'] ?? 'unpaid')) ?>
+                </span>
               </div>
               <div class="flex justify-between py-1 border-b border-slate-100">
                 <span class="text-slate-500">Dispatch Status:</span>

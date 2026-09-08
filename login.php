@@ -20,12 +20,18 @@ $errors = [];
 
 // Handle login submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // CSRF verification
+    if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+        $errors[] = 'Invalid or expired security token (CSRF). Please refresh and try again.';
+    }
+
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    // Validate required fields
-    if ($err = validateRequired($username, 'Username')) $errors[] = $err;
+    // Validate required fields and lengths
+    if ($err = validateRequired($username, 'Username or Email')) $errors[] = $err;
     if ($err = validateRequired($password, 'Password')) $errors[] = $err;
+    if ($err = validateStringLength($username, 'Username or Email', 100)) $errors[] = $err;
 
     if (empty($errors)) {
         try {
@@ -151,6 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <!-- Login Form -->
             <form method="POST" action="login.php<?= !empty($_GET['redirect']) ? '?redirect=' . urlencode($_GET['redirect']) : '' ?>" class="space-y-4">
+                <?= csrfField() ?>
                 <?php if (!empty($_GET['redirect'])): ?>
                     <input type="hidden" name="redirect" value="<?= htmlspecialchars($_GET['redirect']) ?>">
                 <?php endif; ?>

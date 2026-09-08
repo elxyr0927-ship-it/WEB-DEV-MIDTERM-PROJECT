@@ -88,3 +88,85 @@ function getRegionalRouteKey(string $origin, string $dest): string
     return 'inter_island';
 }
 
+/**
+ * Log admin operations (status changes, price updates, capacity adjustments, deletions)
+ */
+function logAdminAction(PDO $pdo, int $adminId, string $action, ?string $details = null): bool
+{
+    try {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        $stmt = $pdo->prepare("
+            INSERT INTO admin_logs (admin_id, action, details, ip_address)
+            VALUES (:admin_id, :action, :details, :ip_address)
+        ");
+        return $stmt->execute([
+            'admin_id'   => $adminId,
+            'action'     => $action,
+            'details'    => $details,
+            'ip_address' => $ip
+        ]);
+    } catch (PDOException $e) {
+        // Silently log or handle to not break core admin operation
+        error_log("Failed to insert admin log: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Fetch all payment methods (active only by default, or all for admin configuration)
+ */
+function getPaymentMethods(PDO $pdo, bool $activeOnly = true): array
+{
+    $sql = "SELECT * FROM payment_methods";
+    if ($activeOnly) {
+        $sql .= " WHERE is_active = 1";
+    }
+    $sql .= " ORDER BY id ASC";
+    $stmt = $pdo->query($sql);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Fetch a single payment method by code
+ */
+function getPaymentMethod(PDO $pdo, string $code): ?array
+{
+    $stmt = $pdo->prepare("SELECT * FROM payment_methods WHERE method_code = :code");
+    $stmt->execute(['code' => $code]);
+    $res = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $res ?: null;
+}
+
+/**
+ * Update payment method credentials and instructions (admin only)
+ */
+function updatePaymentMethod(PDO $pdo, string $code, array $data): bool
+{
+    $allowed = ['account_name', 'account_number', 'instructions', 'is_active'];
+    $fields = [];
+    $params = ['code' => $code];
+
+    foreach ($data as $key => $val) {
+        if (in_array($key, $allowed, true)) {
+            $fields[] = "{$key} = :{$key}";
+            $params[$key] = $val;
+        }
+    }
+
+    if (empty($fields)) {
+        return false;
+    }
+
+    $sql = "UPDATE payment_methods SET " . implode(', ', $fields) . " WHERE method_code = :code";
+    $stmt = $pdo->prepare($sql);
+    return $stmt->execute($params);
+}
+
+/**
+ * Count unread customer support inquiries
+ */
+function getUnreadMessagesCount(PDO $pdo): int
+{
+    $stmt = $pdo->query("SELECT COUNT(*) FROM contact_messages WHERE is_read = 0 AND (deleted_at IS NULL)");
+    return (int)$stmt->fetchColumn();
+}

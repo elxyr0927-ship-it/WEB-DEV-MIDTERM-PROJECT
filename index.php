@@ -36,10 +36,14 @@ $routes = [
     'success'  => __DIR__ . '/app/pages/success.php',
     'info'     => __DIR__ . '/app/pages/info.php',
     'customer_dashboard' => __DIR__ . '/app/pages/customer_dashboard.php',
+    'payment'            => __DIR__ . '/app/pages/payment.php',
+    'receipt'            => __DIR__ . '/app/pages/receipt.php',
     'admin_dashboard'    => __DIR__ . '/app/pages/admin_dashboard.php',
+    'admin_services'     => __DIR__ . '/app/pages/admin_services.php',
     'process_booking'    => __DIR__ . '/process_booking.php',
     'terms'              => __DIR__ . '/app/pages/terms.php',
     'security'           => __DIR__ . '/app/pages/security.php',
+    'admin_inquiries'    => __DIR__ . '/app/pages/admin_inquiries.php',
 ];
 
 // If requesting a specific page from the route whitelist, load it

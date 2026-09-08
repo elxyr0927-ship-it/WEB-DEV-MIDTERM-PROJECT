@@ -10,29 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Rate calculator tabs switching
-  const tabButtons = document.querySelectorAll('.tab-button');
-  tabButtons.forEach((btn) => {
-    btn.addEventListener('click', function () {
-      const tab = this.dataset.tab;
-      
-      tabButtons.forEach((b) => {
-        b.classList.remove('active', 'bg-white', 'text-brandNavy', 'shadow-sm', 'border', 'border-slate-200');
-        b.classList.add('hover:text-brandNavy', 'text-slate-600');
-      });
-      this.classList.add('active', 'bg-white', 'text-brandNavy', 'shadow-sm', 'border', 'border-slate-200');
-      this.classList.remove('hover:text-brandNavy');
-
-      document.querySelectorAll('.tab-content').forEach((el) => {
-        el.classList.add('hidden');
-      });
-      const targetContent = document.getElementById('tab-' + tab);
-      if (targetContent) {
-        targetContent.classList.remove('hidden');
-      }
-    });
-  });
-
   // Dynamic Rate Calculation formula
   const calcWeight = document.getElementById('calc-weight');
   const calcTier = document.getElementById('calc-tier');
@@ -107,15 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         window.location.href = `login.php?redirect=${encodeURIComponent(bookingUrl)}`;
       }
-    });
-  }
-
-  // Rate calculator freight form submit
-  const freightForm = document.getElementById('rate-form-freight');
-  if (freightForm) {
-    freightForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      alert('Your Commercial Freight inquiry has been logged. Our freight operations team will contact you within 15 minutes.');
     });
   }
 

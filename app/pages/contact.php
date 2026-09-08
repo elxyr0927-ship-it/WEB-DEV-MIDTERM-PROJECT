@@ -1,4 +1,55 @@
 <?php
+session_start();
+require_once __DIR__ . '/../database/config.php';
+require_once __DIR__ . '/../database/validation.php';
+
+$pdo = getConnection();
+$contactSuccess = '';
+$contactError = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_contact_message'])) {
+    if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+        $contactError = 'Security token expired or invalid (CSRF). Please refresh and try again.';
+    } else {
+        $name = trim($_POST['name'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $subject = trim($_POST['subject'] ?? 'General Inquiries');
+        $trackingId = trim($_POST['tracking_id'] ?? '');
+        $message = trim($_POST['message'] ?? '');
+
+        $errs = [
+            validateRequired($name, 'Your Name'),
+            validateStringLength($name, 'Your Name', 100),
+            validateRequired($email, 'Email Address'),
+            validateEmailFormat($email),
+            validateRequired($message, 'Message'),
+            validateStringLength($message, 'Message', 3000, 10)
+        ];
+        $cleanErrs = array_filter($errs);
+
+        if (!empty($cleanErrs)) {
+            $contactError = reset($cleanErrs);
+        } else {
+            try {
+                $finalSubject = $subject . (!empty($trackingId) ? " [Ref: {$trackingId}]" : "");
+                $stmt = $pdo->prepare("
+                    INSERT INTO contact_messages (name, email, subject, message, is_read, created_at) 
+                    VALUES (:name, :email, :subject, :message, 0, NOW())
+                ");
+                $stmt->execute([
+                    'name'    => $name,
+                    'email'   => $email,
+                    'subject' => $finalSubject,
+                    'message' => $message
+                ]);
+                $contactSuccess = "Thank you, {$name}! Your message has been safely received. A support specialist will follow up at {$email} shortly.";
+            } catch (PDOException $e) {
+                $contactError = 'Error submitting your inquiry: ' . $e->getMessage();
+            }
+        }
+    }
+}
+
 $pageTitle = "Contact & Hub Locations | YOCOR Express";
 $activeNav = "contact";
 
@@ -91,41 +142,63 @@ include __DIR__ . '/../includes/header.php';
           <h2 class="text-xl font-extrabold text-brandNavy mb-1">Send a Message to Support</h2>
           <p class="text-xs text-slate-500 mb-6">Our average customer support response time is under 15 minutes.</p>
 
-          <form id="contact-form" class="space-y-4">
+          <?php if (!empty($contactSuccess)): ?>
+            <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-xs font-bold flex items-center gap-2.5 mb-5 shadow-sm">
+              <i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>
+              <span><?= htmlspecialchars($contactSuccess) ?></span>
+            </div>
+          <?php endif; ?>
+
+          <?php if (!empty($contactError)): ?>
+            <div class="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-xl text-xs font-bold flex items-center gap-2.5 mb-5 shadow-sm">
+              <i class="fa-solid fa-circle-exclamation text-rose-600 text-base"></i>
+              <span><?= htmlspecialchars($contactError) ?></span>
+            </div>
+          <?php endif; ?>
+
+          <form method="POST" action="" class="space-y-4">
+            <?= csrfField() ?>
             <div class="grid sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Your Name</label>
-                <input type="text" required placeholder="e.g. Alex Santos" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange outline-none text-xs text-slate-900 transition-all">
+                <input type="text" name="name" required placeholder="e.g. Alex Santos" 
+                       value="<?= htmlspecialchars($_POST['name'] ?? ($_SESSION['username'] ?? '')) ?>"
+                       class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange outline-none text-xs text-slate-900 transition-all">
               </div>
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
-                <input type="email" required placeholder="e.g. alex@example.com" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange outline-none text-xs text-slate-900 transition-all">
+                <input type="email" name="email" required placeholder="e.g. alex@example.com" 
+                       value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
+                       class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange outline-none text-xs text-slate-900 transition-all">
               </div>
             </div>
 
             <div class="grid sm:grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Tracking ID (Optional)</label>
-                <input type="text" placeholder="e.g. YCR-9824109" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange outline-none text-xs text-slate-900 transition-all">
+                <input type="text" name="tracking_id" placeholder="e.g. YR-A7F3B9" 
+                       value="<?= htmlspecialchars($_POST['tracking_id'] ?? '') ?>"
+                       class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange outline-none text-xs text-slate-900 transition-all uppercase font-mono">
               </div>
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Inquiry Subject</label>
-                <select class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange outline-none text-xs text-slate-900 transition-all">
-                  <option>Package Status & Delivery Delay</option>
-                  <option>Commercial Freight Quote</option>
-                  <option>Corporate Business Account</option>
-                  <option>Claims & Transit Insurance</option>
-                  <option>General Inquiries</option>
+                <select name="subject" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange outline-none text-xs text-slate-900 transition-all">
+                  <option value="Package Status & Delivery Delay">Package Status & Delivery Delay</option>
+                  <option value="Commercial Freight Quote">Commercial Freight Quote</option>
+                  <option value="Corporate Business Account">Corporate Business Account</option>
+                  <option value="Claims & Transit Insurance">Claims & Transit Insurance</option>
+                  <option value="General Inquiries">General Inquiries</option>
                 </select>
               </div>
             </div>
 
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">Detailed Message</label>
-              <textarea rows="4" required placeholder="Describe your inquiry in detail..." class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange outline-none text-xs text-slate-900 transition-all"></textarea>
+              <textarea name="message" rows="4" required placeholder="Describe your inquiry in detail (minimum 10 characters)..." 
+                        class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange outline-none text-xs text-slate-900 transition-all"><?= htmlspecialchars($_POST['message'] ?? '') ?></textarea>
             </div>
 
-            <button type="submit" class="w-full bg-brandNavy hover:bg-slate-900 text-white font-extrabold py-3.5 px-6 rounded-xl brand-glow-navy transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2">
+            <button type="submit" name="send_contact_message" class="w-full bg-brandNavy hover:bg-slate-900 text-white font-extrabold py-3.5 px-6 rounded-xl brand-glow-navy transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2">
               <i class="fa-solid fa-paper-plane"></i>
               <span>Send Message</span>
             </button>

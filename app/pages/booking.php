@@ -13,6 +13,7 @@ if ($_SESSION['role'] === 'admin') {
 }
 
 require_once __DIR__ . '/../database/config.php';
+require_once __DIR__ . '/../database/validation.php';
 
 // Get any error messages from session (set by process_booking.php)
 $errors = $_SESSION['booking_errors'] ?? [];
@@ -23,9 +24,9 @@ $success = $_SESSION['booking_success'] ?? false;
 $lastTrackingCode = $_SESSION['last_tracking_code'] ?? '';
 unset($_SESSION['booking_success'], $_SESSION['last_tracking_code']);
 
-// Fetch available services (only those with capacity > 0)
+// Fetch available services (only active ones with capacity > 0)
 $pdo = getConnection();
-$stmt = $pdo->prepare("SELECT id, name, description, capacity, base_price, price_per_kg FROM services WHERE capacity > 0 ORDER BY id");
+$stmt = $pdo->prepare("SELECT id, name, description, capacity, base_price, price_per_kg FROM services WHERE capacity > 0 AND is_active = 1 ORDER BY id");
 $stmt->execute();
 $services = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -134,6 +135,7 @@ include __DIR__ . '/../includes/header.php';
             <!-- Booking Form Card -->
             <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200 relative">
                 <form action="process_booking.php" method="POST" class="space-y-5">
+                    <?= csrfField() ?>
                     
                     <!-- Step 1: Sender & Pickup -->
                     <div>
@@ -208,7 +210,7 @@ include __DIR__ . '/../includes/header.php';
                             </div>
                             <div>
                                 <label class="block text-[11px] font-bold text-slate-700 mb-1">Estimated Weight (kg) <span class="text-red-500">*</span></label>
-                                <input type="number" name="weight" id="weight" required min="0.1" step="0.5" 
+                                <input type="number" name="weight" id="weight" required min="0.1" step="0.1" 
                                        value="<?= htmlspecialchars($prefillWeight) ?>"
                                        class="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-300 focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none transition-all text-xs">
                             </div>
@@ -230,9 +232,6 @@ include __DIR__ . '/../includes/header.php';
                                 <span id="live-cost-estimate" class="text-lg sm:text-xl font-black text-brandOrange">₱0.00 <span class="text-[10px] font-normal text-slate-500">PHP</span></span>
                             </div>
                         </div>
-
-                        <!-- Hidden Total Cost Input for Database -->
-                        <input type="hidden" name="total_cost" id="total_cost" value="0.00">
                     </div>
 
                     <!-- Submit Button -->

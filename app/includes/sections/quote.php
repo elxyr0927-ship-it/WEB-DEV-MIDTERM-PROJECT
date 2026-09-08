@@ -20,18 +20,8 @@
 
         <!-- Form Card Container -->
         <div class="bg-white/95 backdrop-blur-md p-5 sm:p-7 rounded-2xl shadow-xl border border-slate-200/90 relative">
-          <!-- Top Mode Selector Tabs -->
-          <div class="flex items-center justify-center gap-2 mb-6 p-1 bg-slate-100 rounded-xl max-w-sm mx-auto text-xs font-bold text-slate-600">
-            <button type="button" data-tab="parcel" class="tab-button flex-1 py-1.5 px-3 rounded-lg bg-white text-brandNavy shadow-sm border border-slate-200 flex items-center justify-center gap-1.5 transition-all active">
-              <i class="fa-solid fa-box text-brandOrange"></i> Parcel Express
-            </button>
-            <button type="button" data-tab="freight" class="tab-button flex-1 py-1.5 px-3 rounded-lg hover:text-brandNavy flex items-center justify-center gap-1.5 transition-all">
-              <i class="fa-solid fa-truck-ramp-box"></i> Commercial Freight
-            </button>
-          </div>
-
-          <!-- PARCEL EXPRESS TAB CONTENT -->
-          <div id="tab-parcel" class="tab-content">
+          <!-- PARCEL EXPRESS RATE CALCULATOR -->
+          <div id="tab-parcel">
             <form id="rate-form-parcel" class="space-y-4">
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -74,7 +64,7 @@
                   <label class="block text-[11px] font-extrabold text-brandNavy uppercase tracking-wider mb-1">Package Weight (kg)</label>
                   <div class="relative">
                     <i class="fa-solid fa-weight-hanging absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                    <input id="calc-weight" type="number" min="0.5" step="0.5" value="1.0" class="w-full pl-9 pr-3 py-2 rounded-lg bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none text-xs font-medium text-slate-900 transition-all">
+                    <input id="calc-weight" type="number" min="0.1" step="0.1" value="1.0" class="w-full pl-9 pr-3 py-2 rounded-lg bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none text-xs font-medium text-slate-900 transition-all">
                   </div>
                 </div>
 
@@ -113,54 +103,6 @@
                   <i class="fa-solid fa-box-open text-xs"></i> Proceed to Book This Delivery
                 </button>
               </div>
-            </form>
-          </div>
-
-          <!-- COMMERCIAL FREIGHT TAB CONTENT -->
-          <div id="tab-freight" class="tab-content hidden">
-            <form id="rate-form-freight" class="space-y-4">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-[11px] font-extrabold text-brandNavy uppercase tracking-wider mb-1">Freight Type</label>
-                  <div class="relative">
-                    <i class="fa-solid fa-boxes-stacked absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                    <select class="w-full pl-9 pr-3 py-2 rounded-lg bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none text-xs font-medium text-slate-900 transition-all">
-                      <option>Less-Than-Truckload (LTL Pallet)</option>
-                      <option>Full Truckload (FTL 10-Wheeler / 40ft)</option>
-                      <option>Multimodal Container Ocean Freight</option>
-                      <option>Industrial Oversized Equipment</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label class="block text-[11px] font-extrabold text-brandNavy uppercase tracking-wider mb-1">Estimated Total Weight (Tons)</label>
-                  <div class="relative">
-                    <i class="fa-solid fa-scale-unbalanced-flip absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                    <input type="number" min="0.5" step="0.1" value="2.5" class="w-full pl-9 pr-3 py-2 rounded-lg bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none text-xs font-medium text-slate-900 transition-all">
-                  </div>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-[11px] font-extrabold text-brandNavy uppercase tracking-wider mb-1">Origin Port / Logistics Center</label>
-                  <input type="text" placeholder="e.g. Subic FreePort Zone" required class="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none text-xs font-medium text-slate-900 transition-all">
-                </div>
-                <div>
-                  <label class="block text-[11px] font-extrabold text-brandNavy uppercase tracking-wider mb-1">Destination Cargo Terminal</label>
-                  <input type="text" placeholder="e.g. Davao Port Terminal" required class="w-full px-3 py-2 rounded-lg bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none text-xs font-medium text-slate-900 transition-all">
-                </div>
-              </div>
-
-              <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
-                <span class="text-slate-600 text-[11px] font-medium"><i class="fa-solid fa-circle-info text-brandNavy mr-1.5"></i> Commercial Freight requires dedicated route planning by our dispatch team.</span>
-                <span class="text-brandNavy font-extrabold text-xs">Custom Quote</span>
-              </div>
-
-              <button type="submit" class="w-full bg-brandNavy hover:bg-slate-900 text-white font-black py-2.5 px-5 rounded-xl transition-all shadow-md brand-glow-navy text-xs uppercase tracking-wider flex items-center justify-center gap-2">
-                <i class="fa-solid fa-paper-plane text-xs"></i> Request Dedicated Commercial Freight Quote
-              </button>
             </form>
           </div>
 

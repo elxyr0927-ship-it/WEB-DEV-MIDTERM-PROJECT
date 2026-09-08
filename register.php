@@ -7,6 +7,11 @@ require_once 'app/database/validation.php';
  $success = false;
 
  if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // CSRF verification
+    if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+        $errors[] = 'Invalid or expired security token (CSRF). Please refresh and try again.';
+    }
+
     $username = trim($_POST['username'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $age = trim($_POST['age'] ?? '');
@@ -18,8 +23,10 @@ require_once 'app/database/validation.php';
     if ($err = validateIntRange($age, 'Age', 1, 120)) $errors[] = $err;
     if ($err = validateRequired($password, 'Password')) $errors[] = $err;
 
-    if (strlen($password) < 8 ) $errors[] = 'Password must be at least 8 characters.';
-    if ($password !== $confirm) $errors[] = 'Password do not match.';
+    if ($err = validateStringLength($username, 'Username', 50, 3)) $errors[] = $err;
+    if ($err = validateStringLength($email, 'Email address', 100)) $errors[] = $err;
+    if ($err = validateStringLength($password, 'Password', 128, 8)) $errors[] = $err;
+    if ($password !== $confirm) $errors[] = 'Passwords do not match.';
 
     if (empty($errors)) {
         try {
@@ -143,6 +150,7 @@ require_once 'app/database/validation.php';
 
             <!-- Registration Form -->
             <form method="POST" action="" class="space-y-4">
+                <?= csrfField() ?>
                 <div class="grid sm:grid-cols-3 gap-3">
                     <div class="sm:col-span-2">
                         <label class="block text-xs font-bold text-slate-700 mb-1.5">Username <span class="text-brandOrange">*</span></label>
