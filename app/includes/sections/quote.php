@@ -1,3 +1,16 @@
+<?php
+// Dynamically query available active courier services from database
+$activeServices = [];
+if (function_exists('getConnection')) {
+    try {
+        $q_pdo = getConnection();
+        $q_stmt = $q_pdo->query("SELECT id, name, description, capacity, base_price, price_per_kg FROM services WHERE capacity > 0 AND is_active = 1 ORDER BY id ASC");
+        $activeServices = $q_stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $activeServices = [];
+    }
+}
+?>
     <!-- RATE CALCULATOR / INSTANT ESTIMATE SECTION -->
     <section id="quote" class="py-10 sm:py-14 lg:py-16 bg-gradient-to-b from-slate-50 via-white to-slate-100 border-t border-slate-200 relative overflow-hidden">
       <div class="absolute inset-0 opacity-50 pointer-events-none flex items-center justify-center">
@@ -72,10 +85,17 @@
                   <label class="block text-[11px] font-extrabold text-brandNavy uppercase tracking-wider mb-1">Service Tier</label>
                   <div class="relative">
                     <i class="fa-solid fa-sliders absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                    <select id="calc-tier" class="w-full pl-9 pr-3 py-2 rounded-lg bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none text-xs font-medium text-slate-900 transition-all">
-                      <option value="sameday">Same-Day Express Air (Guaranteed)</option>
-                      <option value="priority" selected>Priority Express (1-2 Days)</option>
-                      <option value="standard">Standard Ground Courier (3-5 Days)</option>
+                    <select id="calc-service-id" class="w-full pl-9 pr-3 py-2 rounded-lg bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none text-xs font-medium text-slate-900 transition-all">
+                      <?php if (empty($activeServices)): ?>
+                        <option value="">No services available currently</option>
+                      <?php else: ?>
+                        <?php foreach ($activeServices as $srv): ?>
+                          <option value="<?= $srv['id'] ?>">
+                            <?= htmlspecialchars($srv['name']) ?> 
+                            (₱<?= number_format((float)$srv['base_price'], 2) ?> base + ₱<?= number_format((float)$srv['price_per_kg'], 2) ?>/kg)
+                          </option>
+                        <?php endforeach; ?>
+                      <?php endif; ?>
                     </select>
                   </div>
                 </div>

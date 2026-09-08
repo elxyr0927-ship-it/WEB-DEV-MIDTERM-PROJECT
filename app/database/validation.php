@@ -108,8 +108,15 @@ function validateStudentInput(array $post): array
 
 /**
  * Universal Sanitization Helpers
+ * Stored data is sanitized of dangerous control characters/tags,
+ * while HTML entity encoding is performed strictly on output to avoid double-escaping.
  */
 function sanitizeString(?string $value): string
+{
+    return trim(strip_tags($value ?? ''));
+}
+
+function escapeHtml(?string $value): string
 {
     return htmlspecialchars(trim($value ?? ''), ENT_QUOTES, 'UTF-8');
 }
@@ -138,9 +145,9 @@ function validatePhoneNumber(?string $value, string $label): ?string
     if ($val === '') {
         return null;
     }
-    // Accommodates Philippine mobile numbers (e.g. 09171234567, +639171234567, 0917-123-4567)
+    // Accommodates Philippine mobile numbers (e.g. 09171234567, +639171234567, 0917-123-4567) or payment card numbers (4-19 digits)
     $cleanNumber = preg_replace('/[\s\-\(\)]+/', '', $val);
-    if (!preg_match('/^(\+?63|0)?9\d{9}$/', $cleanNumber) && !preg_match('/^\d{4,15}$/', $cleanNumber)) {
+    if (!preg_match('/^(\+?63|0)?9\d{9}$/', $cleanNumber) && !preg_match('/^\d{4,19}$/', $cleanNumber)) {
         return "$label must be a valid contact or card identification number.";
     }
     return null;

@@ -10,9 +10,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Dynamic Rate Calculation formula
+  // Dynamic Rate Calculation formula matching booking.php exactly
   const calcWeight = document.getElementById('calc-weight');
-  const calcTier = document.getElementById('calc-tier');
+  const calcServiceId = document.getElementById('calc-service-id');
   const calcOriginRegion = document.getElementById('calc-origin-region');
   const calcDestRegion = document.getElementById('calc-destination-region');
   const calcResultPrice = document.getElementById('calc-result-price');
@@ -31,36 +31,34 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function calculateRate() {
-    if (!calcWeight || !calcTier || !calcResultPrice) return;
+    if (!calcWeight || !calcServiceId || !calcResultPrice) return;
     const weight = parseFloat(calcWeight.value) || 1.0;
-    const tier = calcTier.value;
+    const serviceId = calcServiceId.value ? parseInt(calcServiceId.value, 10) : 0;
     const originRegion = calcOriginRegion ? calcOriginRegion.value : 'Luzon';
     const destRegion = calcDestRegion ? calcDestRegion.value : 'Luzon';
     
-    // Dynamic service pricing from DB (or sensible fallbacks)
+    // Dynamic service pricing from DB window.serviceRates
     const sRates = window.serviceRates || {};
-    let baseRate = 100;
-    let multiplier = 40; // per kg
+    const selectedService = sRates[serviceId];
 
-    if (tier === 'sameday') {
-      baseRate = sRates[3]?.base ?? 220;
-      multiplier = sRates[3]?.perKg ?? 80;
-    } else if (tier === 'priority') {
-      baseRate = sRates[2]?.base ?? 150;
-      multiplier = sRates[2]?.perKg ?? 60;
-    } else {
-      baseRate = sRates[1]?.base ?? 100;
-      multiplier = sRates[1]?.perKg ?? 40;
+    if (!selectedService) {
+      calcResultPrice.innerHTML = `₱0.00 <span class="text-xs font-normal text-slate-500">PHP</span>`;
+      return;
     }
 
+    const baseRate = parseFloat(selectedService.base) || 100.00;
+    const multiplier = parseFloat(selectedService.perKg) || 40.00; // per kg for extra weight
     const regionalDistanceFee = getRouteFee(originRegion, destRegion);
+    
+    // Formula matches booking.php: base + (max(0, weight - 1) * perKg) + distanceFee
     const calculatedTotal = baseRate + (Math.max(0, weight - 1) * multiplier) + regionalDistanceFee;
     calcResultPrice.innerHTML = `₱${calculatedTotal.toFixed(2)} <span class="text-xs font-normal text-slate-500">PHP</span>`;
   }
 
-  if (calcWeight && calcTier) {
+  if (calcWeight && calcServiceId) {
     calcWeight.addEventListener('input', calculateRate);
-    calcTier.addEventListener('change', calculateRate);
+    calcServiceId.addEventListener('change', calculateRate);
+    calculateRate(); // Initial calculation on load
   }
   if (calcOriginRegion) calcOriginRegion.addEventListener('change', calculateRate);
   if (calcDestRegion) calcDestRegion.addEventListener('change', calculateRate);
@@ -71,13 +69,13 @@ document.addEventListener('DOMContentLoaded', () => {
     parcelForm.addEventListener('submit', (e) => {
       e.preventDefault();
       const weightVal = calcWeight ? calcWeight.value : '1';
-      const tierVal = calcTier ? calcTier.value : 'priority';
+      const serviceIdVal = calcServiceId ? calcServiceId.value : '';
       const oReg = calcOriginRegion ? calcOriginRegion.value : 'Luzon';
       const dReg = calcDestRegion ? calcDestRegion.value : 'Luzon';
       const oAddr = document.getElementById('calc-origin') ? document.getElementById('calc-origin').value : '';
       const dAddr = document.getElementById('calc-destination') ? document.getElementById('calc-destination').value : '';
       
-      const bookingUrl = `booking.php?weight=${encodeURIComponent(weightVal)}&tier=${encodeURIComponent(tierVal)}&origin_region=${encodeURIComponent(oReg)}&dest_region=${encodeURIComponent(dReg)}&pickup=${encodeURIComponent(oAddr)}&delivery=${encodeURIComponent(dAddr)}`;
+      const bookingUrl = `booking.php?weight=${encodeURIComponent(weightVal)}&service_id=${encodeURIComponent(serviceIdVal)}&origin_region=${encodeURIComponent(oReg)}&dest_region=${encodeURIComponent(dReg)}&pickup=${encodeURIComponent(oAddr)}&delivery=${encodeURIComponent(dAddr)}`;
 
       if (window.isLoggedIn) {
         window.location.href = bookingUrl;

@@ -103,7 +103,7 @@
                   $f_rates = getRegionalRates($f_pdo);
                   echo "window.regionalRates = " . json_encode($f_rates) . ";\n";
               }
-              $f_services = $f_pdo->query("SELECT id, name, base_price, price_per_kg FROM services")->fetchAll(PDO::FETCH_ASSOC);
+              $f_services = $f_pdo->query("SELECT id, name, base_price, price_per_kg FROM services WHERE is_active = 1 AND capacity > 0 ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
               $f_serviceMap = [];
               foreach ($f_services as $fs) {
                   $f_serviceMap[$fs['id']] = [

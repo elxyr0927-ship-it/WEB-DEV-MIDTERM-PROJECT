@@ -43,7 +43,7 @@ $prefillDelivery = $_GET['delivery'] ?? ($_POST['delivery_address'] ?? '');
 $regionalRates = getRegionalRates($pdo);
 
 // Map tier or service name to service ID
-$prefillServiceId = isset($_POST['service_id']) ? (int)$_POST['service_id'] : 0;
+$prefillServiceId = isset($_GET['service_id']) ? (int)$_GET['service_id'] : (isset($_POST['service_id']) ? (int)$_POST['service_id'] : 0);
 if (!$prefillServiceId && !empty($services)) {
     if ($prefillService === 'parcel' || $prefillTier === 'priority') {
         $prefillServiceId = $services[0]['id']; // Parcel Express

@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_tracker']) && 
     $checkpoint = trim($_POST['checkpoint'] ?? '');
     $notes = trim($_POST['notes'] ?? '');
 
-    $chkErr = validateStringLength($checkpoint, 'Current Checkpoint', 100);
+    $chkErr = validateStringLength($checkpoint, 'Current Checkpoint', 150);
     $noteErr = validateStringLength($notes, 'Tracker Notes', 500);
 
     if ($chkErr || $noteErr) {
