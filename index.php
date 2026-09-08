@@ -1,4 +1,7 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 /**
  * YOCOR Express Logistics - Front Controller & Router
  * Routes requests to dedicated controllers/pages in app/pages/

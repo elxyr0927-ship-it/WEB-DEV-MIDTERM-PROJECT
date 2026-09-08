@@ -15,12 +15,18 @@ require_once 'app/database/validation.php';
     $username = trim($_POST['username'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $age = trim($_POST['age'] ?? '');
+    $phone = trim($_POST['phone'] ?? '');
     $password = ($_POST['password'] ?? '');
     $confirm = $_POST['confirm_password'] ?? '';
     
     if ($err = validateRequired($username, 'Username')) $errors[] = $err;
     if ($err = validateEmailFormat($email)) $errors[] = $err;
-    if ($err = validateIntRange($age, 'Age', 1, 120)) $errors[] = $err;
+    if (!empty($age)) {
+        if ($err = validateIntRange($age, 'Age', 1, 120)) $errors[] = $err;
+    }
+    if (!empty($phone) && ($err = validatePhoneNumber($phone, 'Phone number'))) {
+        $errors[] = $err;
+    }
     if ($err = validateRequired($password, 'Password')) $errors[] = $err;
 
     if ($err = validateStringLength($username, 'Username', 50, 3)) $errors[] = $err;
@@ -56,18 +62,27 @@ require_once 'app/database/validation.php';
         try {
             $pdo = getConnection();
             $stmt = $pdo->prepare("
-                INSERT INTO user (username, email, age, password_hash, role)
-                VALUES (:username, :email, :age, :hash, 'customer')
+                INSERT INTO user (username, email, age, phone, password_hash, role)
+                VALUES (:username, :email, :age, :phone, :hash, 'customer')
             ");
 
             $stmt->execute([
                 'username' => $username,
                 'email'    => $email,
-                'age'      => $age,
+                'age'      => !empty($age) ? (int)$age : null,
+                'phone'    => !empty($phone) ? $phone : null,
                 'hash'     => $hashedPassword
             ]);
 
-            header('Location: login.php?registered=1');
+            $newUserId = (int)$pdo->lastInsertId();
+
+            // Auto-login new user directly
+            $_SESSION['user_id'] = $newUserId;
+            $_SESSION['username'] = $username;
+            $_SESSION['role'] = 'customer';
+            $_SESSION['welcome_new_user'] = true;
+
+            header('Location: customer_dashboard.php');
             exit;
 
         } catch (PDOException $e) {
@@ -165,24 +180,39 @@ require_once 'app/database/validation.php';
                         </div>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Age <span class="text-brandOrange">*</span></label>
-                        <input type="number" name="age" required min="1" max="120"
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Age <span class="text-slate-400 font-normal">(Optional)</span></label>
+                        <input type="number" name="age" min="1" max="120"
                                placeholder="25"
                                value="<?= htmlspecialchars($_POST['age'] ?? '') ?>"
                                class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange/40 focus:border-brandOrange outline-none transition-all text-sm text-slate-800 text-center font-bold">
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs font-bold text-slate-700 mb-1.5">Email Address <span class="text-brandOrange">*</span></label>
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
-                            <i class="fa-regular fa-envelope text-sm"></i>
+                <div class="grid sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Email Address <span class="text-brandOrange">*</span></label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i class="fa-regular fa-envelope text-sm"></i>
+                            </div>
+                            <input type="email" name="email" required autocomplete="email"
+                                   placeholder="john@example.com"
+                                   value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
+                                   class="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange/40 focus:border-brandOrange outline-none transition-all text-sm text-slate-800 placeholder-slate-400">
                         </div>
-                        <input type="email" name="email" required autocomplete="email"
-                               placeholder="john@example.com"
-                               value="<?= htmlspecialchars($_POST['email'] ?? '') ?>"
-                               class="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange/40 focus:border-brandOrange outline-none transition-all text-sm text-slate-800 placeholder-slate-400">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-1.5">Mobile Phone <span class="text-slate-400 font-normal">(Optional)</span></label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                                <i class="fa-solid fa-phone text-sm"></i>
+                            </div>
+                            <input type="tel" name="phone" autocomplete="tel"
+                                   placeholder="09171234567"
+                                   value="<?= htmlspecialchars($_POST['phone'] ?? '') ?>"
+                                   class="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange/40 focus:border-brandOrange outline-none transition-all text-sm text-slate-800 placeholder-slate-400">
+                        </div>
                     </div>
                 </div>
 

@@ -21,11 +21,11 @@ if (!empty($searchQuery)) {
                 FROM bookings b 
                 JOIN services s ON b.service_id = s.id 
                 JOIN user u ON b.user_id = u.id 
-                WHERE b.tracking_code = :query OR b.id = :num_id
+                WHERE UPPER(b.tracking_code) = UPPER(:query) OR b.id = :num_id
             ");
             $numericFallback = is_numeric($searchQuery) ? (int)$searchQuery : 0;
             $stmt->execute([
-                'query' => strtoupper($searchQuery),
+                'query' => trim($searchQuery),
                 'num_id' => $numericFallback
             ]);
             $booking = $stmt->fetch(PDO::FETCH_ASSOC);

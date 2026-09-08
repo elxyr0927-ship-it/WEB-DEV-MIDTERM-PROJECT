@@ -1,4 +1,7 @@
 <?php
+require_once __DIR__ . '/../database/config.php';
+require_once __DIR__ . '/../database/validation.php';
+
 $pageTitle = "Instant Shipping Rate Calculator | YOCOR Express";
 $activeNav = "quote";
 

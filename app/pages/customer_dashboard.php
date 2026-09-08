@@ -1,6 +1,8 @@
 <?php
-// Start session and require login
-session_start();
+// Start session safely and require login
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
@@ -107,6 +109,7 @@ include __DIR__ . '/../includes/header.php';
         .customer-sidebar.collapsed nav span,
         .customer-sidebar.collapsed nav .nav-badge,
         .customer-sidebar.collapsed nav .sidebar-heading,
+        .customer-sidebar.collapsed nav .customer-sidebar-heading,
         .customer-sidebar.collapsed nav .sidebar-chevron,
         .customer-sidebar.collapsed nav .nested-nav {
             display: none !important;
@@ -151,7 +154,7 @@ include __DIR__ . '/../includes/header.php';
         <nav class="space-y-4 text-xs font-bold">
             <!-- Section 1: Shipping Operations -->
             <div class="space-y-1">
-                <div class="px-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Shipment Activity</div>
+                <div class="sidebar-heading customer-sidebar-heading px-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Shipment Activity</div>
                 <a href="customer_dashboard.php" class="flex items-center justify-between px-3.5 py-2.5 rounded-xl <?= $statusFilter === 'all' && empty($search) ? 'bg-brandOrange/10 text-brandOrange' : 'text-slate-600 hover:bg-slate-100' ?> transition-colors">
                     <div class="flex items-center gap-3 truncate">
                         <i class="fa-solid fa-boxes-stacked text-sm w-4 text-center"></i>
@@ -187,7 +190,7 @@ include __DIR__ . '/../includes/header.php';
 
             <!-- Section 2: Quick Booking Tools -->
             <div class="space-y-1">
-                <div class="px-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Quick Tools</div>
+                <div class="sidebar-heading customer-sidebar-heading px-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Quick Tools</div>
                 <a href="booking.php" class="flex items-center gap-3 px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors">
                     <i class="fa-solid fa-truck-pickup text-slate-400 text-sm w-4 text-center"></i>
                     <span>Book Courier Pickup</span>
@@ -210,7 +213,7 @@ include __DIR__ . '/../includes/header.php';
 
             <!-- Section 3: Support & Account -->
             <div class="space-y-1">
-                <div class="px-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Assistance</div>
+                <div class="sidebar-heading customer-sidebar-heading px-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Assistance</div>
                 <a href="contact.php" class="flex items-center gap-3 px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors">
                     <i class="fa-regular fa-comment-dots text-slate-400 text-sm w-4 text-center"></i>
                     <span>Contact Support Hub</span>
@@ -230,7 +233,7 @@ include __DIR__ . '/../includes/header.php';
     </aside>
 
     <!-- Customer Main Orders Area -->
-    <main class="flex-grow p-4 sm:p-6 md:p-8 max-w-6xl w-full min-w-0">
+    <main class="flex-grow p-4 sm:p-6 md:p-8 max-w-6xl w-full min-w-0 mx-auto transition-all">
         
         <!-- Welcome Header -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
@@ -260,8 +263,14 @@ include __DIR__ . '/../includes/header.php';
             </div>
         </div>
 
-        <!-- Success Message (from booking or payment submission) -->
-        <?php if (isset($_GET['msg']) && $_GET['msg'] === 'booking_success'): ?>
+        <!-- Success Message (from registration, booking or payment submission) -->
+        <?php if (!empty($_SESSION['welcome_new_user'])): ?>
+            <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-3.5 py-2.5 rounded-xl mb-4 text-xs font-bold flex items-center gap-2 shadow-sm">
+                <i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i> 
+                <span>Welcome to YOCOR Express, <?= htmlspecialchars($_SESSION['username']) ?>! Your account has been registered and you are now signed in.</span>
+            </div>
+            <?php unset($_SESSION['welcome_new_user']); ?>
+        <?php elseif (isset($_GET['msg']) && $_GET['msg'] === 'booking_success'): ?>
             <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-3.5 py-2.5 rounded-xl mb-4 text-xs font-bold flex items-center gap-2 shadow-sm">
                 <i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i> 
                 <span>Booking successful! Your shipment has been scheduled with our courier.</span>

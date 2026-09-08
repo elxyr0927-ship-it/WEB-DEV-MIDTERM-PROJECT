@@ -1,6 +1,8 @@
 <?php
-// Start session and require login
-session_start();
+// Start session safely and require login
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
@@ -134,7 +136,7 @@ include __DIR__ . '/../includes/header.php';
 
             <!-- Booking Form Card -->
             <div class="bg-white p-5 sm:p-6 rounded-2xl shadow-sm border border-slate-200 relative">
-                <form action="process_booking.php" method="POST" class="space-y-5">
+                <form id="bookingForm" action="process_booking.php" method="POST" class="space-y-5" novalidate>
                     <?= csrfField() ?>
                     
                     <!-- Step 1: Sender & Pickup -->
@@ -305,11 +307,80 @@ include __DIR__ . '/../includes/header.php';
                 }
 
                 if (serviceSelect && weightInput) {
-                    serviceSelect.addEventListener('change', calculateBookingCost);
+                    serviceSelect.addEventListener('change', function() {
+                        this.classList.remove('border-red-500', 'ring-2', 'ring-red-200');
+                        const existingBanner = document.getElementById('client-service-error');
+                        if (existingBanner) existingBanner.remove();
+                        calculateBookingCost();
+                    });
                     weightInput.addEventListener('input', calculateBookingCost);
                     if (pickupRegionSelect) pickupRegionSelect.addEventListener('change', calculateBookingCost);
                     if (deliveryRegionSelect) deliveryRegionSelect.addEventListener('change', calculateBookingCost);
                     calculateBookingCost(); // Run on page load
+
+                    const bForm = document.getElementById('bookingForm');
+                    if (bForm) {
+                        bForm.addEventListener('submit', function(e) {
+                            // Check service selection first
+                            if (!serviceSelect.value) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                
+                                serviceSelect.focus();
+                                serviceSelect.classList.add('border-red-500', 'ring-2', 'ring-red-200');
+                                
+                                let errBanner = document.getElementById('client-service-error');
+                                if (!errBanner) {
+                                    errBanner = document.createElement('div');
+                                    errBanner.id = 'client-service-error';
+                                    errBanner.className = 'bg-red-50 border-2 border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4 text-xs font-bold flex items-center justify-between gap-3 shadow-md';
+                                    errBanner.innerHTML = `
+                                        <div class="flex items-center gap-2.5">
+                                            <i class="fa-solid fa-circle-exclamation text-red-600 text-base flex-shrink-0"></i>
+                                            <div>
+                                                <strong class="block text-red-800 text-xs">Courier Service Required:</strong>
+                                                <span>Please choose a courier service tier before confirming your booking.</span>
+                                            </div>
+                                        </div>
+                                        <button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-700 text-xs"><i class="fa-solid fa-xmark"></i></button>
+                                    `;
+                                    bForm.parentNode.insertBefore(errBanner, bForm);
+                                }
+                                errBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                return false;
+                            }
+
+                            // Check all required inputs
+                            const requiredInputs = bForm.querySelectorAll('[required]');
+                            for (let input of requiredInputs) {
+                                if (!input.value.trim()) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    input.focus();
+                                    input.classList.add('border-red-500', 'ring-2', 'ring-red-200');
+                                    let errBanner = document.getElementById('client-service-error');
+                                    if (!errBanner) {
+                                        errBanner = document.createElement('div');
+                                        errBanner.id = 'client-service-error';
+                                        errBanner.className = 'bg-red-50 border-2 border-red-400 text-red-700 px-4 py-3 rounded-xl mb-4 text-xs font-bold flex items-center justify-between gap-3 shadow-md';
+                                        bForm.parentNode.insertBefore(errBanner, bForm);
+                                    }
+                                    errBanner.innerHTML = `
+                                        <div class="flex items-center gap-2.5">
+                                            <i class="fa-solid fa-circle-exclamation text-red-600 text-base flex-shrink-0"></i>
+                                            <div>
+                                                <strong class="block text-red-800 text-xs">Missing Required Field:</strong>
+                                                <span>Please fill out all required booking fields before confirming.</span>
+                                            </div>
+                                        </div>
+                                        <button type="button" onclick="this.parentElement.remove()" class="text-red-400 hover:text-red-700 text-xs"><i class="fa-solid fa-xmark"></i></button>
+                                    `;
+                                    errBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    return false;
+                                }
+                            }
+                        });
+                    }
                 }
             </script>
 

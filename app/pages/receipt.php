@@ -1,6 +1,8 @@
 <?php
-// Start session
-session_start();
+// Start session safely
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Require login
 if (!isset($_SESSION['user_id'])) {
@@ -45,12 +47,101 @@ if ($bookingId) {
 $booking = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$booking) {
-    die("Receipt not found. Please verify the shipment ID.");
+    ?>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Receipt Not Found | YOCOR Express</title>
+      <script src="https://cdn.tailwindcss.com"></script>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+      <script>
+        tailwind.config = {
+          theme: {
+            extend: {
+              colors: {
+                brandNavy: '#1D3563',
+                brandOrange: '#F37B23',
+              }
+            }
+          }
+        }
+      </script>
+    </head>
+    <body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+      <div class="max-w-md w-full bg-white rounded-2xl shadow-lg border border-slate-200 p-8 text-center space-y-5">
+        <div class="w-16 h-16 mx-auto bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600 text-2xl shadow-sm">
+          <i class="fa-solid fa-file-circle-question"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-black text-brandNavy">Receipt Not Found</h1>
+          <p class="text-slate-500 text-xs mt-1.5 leading-relaxed">We couldn't locate a shipment waybill matching this ID or tracking number. It may have been canceled or belongs to another session.</p>
+        </div>
+        <div class="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2.5">
+          <a href="<?= ($_SESSION['role'] ?? '') === 'admin' ? 'admin_dashboard.php' : 'customer_dashboard.php' ?>" 
+             class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-brandOrange hover:bg-orange-600 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow-sm">
+            <i class="fa-solid fa-boxes-stacked text-[11px]"></i>
+            <span>Back to Dashboard</span>
+          </a>
+          <a href="booking.php" 
+             class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-2.5 rounded-xl transition-all">
+            <i class="fa-solid fa-plus text-[11px]"></i>
+            <span>Book New Delivery</span>
+          </a>
+        </div>
+      </div>
+    </body>
+    </html>
+    <?php
+    exit;
 }
 
 // Security Authorization: Only booking owner or admin can view this receipt
 if ($_SESSION['role'] !== 'admin' && (int)$_SESSION['user_id'] !== (int)$booking['user_id']) {
-    die("Access denied: You are not authorized to view this receipt.");
+    ?>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Access Denied | YOCOR Express</title>
+      <script src="https://cdn.tailwindcss.com"></script>
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+      <script>
+        tailwind.config = {
+          theme: {
+            extend: {
+              colors: {
+                brandNavy: '#1D3563',
+                brandOrange: '#F37B23',
+              }
+            }
+          }
+        }
+      </script>
+    </head>
+    <body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+      <div class="max-w-md w-full bg-white rounded-2xl shadow-lg border border-slate-200 p-8 text-center space-y-4">
+        <div class="w-16 h-16 mx-auto bg-rose-100 rounded-2xl flex items-center justify-center text-rose-600 text-2xl shadow-sm">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <div>
+          <h1 class="text-xl font-black text-brandNavy">Access Restricted</h1>
+          <p class="text-slate-500 text-xs mt-1.5 leading-relaxed">You are not authorized to view this receipt. It belongs to another customer account.</p>
+        </div>
+        <div class="pt-2">
+          <a href="<?= ($_SESSION['role'] ?? '') === 'admin' ? 'admin_dashboard.php' : 'customer_dashboard.php' ?>" 
+             class="inline-flex items-center gap-2 bg-brandNavy hover:bg-slate-900 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition-all shadow">
+            <i class="fa-solid fa-arrow-left text-[11px]"></i>
+            <span>Back to Dashboard</span>
+          </a>
+        </div>
+      </div>
+    </body>
+    </html>
+    <?php
+    exit;
 }
 
 $displayCode = !empty($booking['tracking_code']) ? $booking['tracking_code'] : ('YR-' . str_pad($booking['id'], 6, '0', STR_PAD_LEFT));
@@ -118,6 +209,27 @@ $pageTitle = "Official Waybill Receipt - {$displayCode} | YOCOR Express";
         </button>
       </div>
     </div>
+
+    <!-- Payment Submitted Feedback Alert (Hide on Print) -->
+    <?php if (isset($_GET['submitted']) || isset($_SESSION['payment_submitted'])): ?>
+      <?php unset($_SESSION['payment_submitted']); ?>
+      <div class="no-print bg-gradient-to-r from-emerald-500 to-emerald-600 text-white p-4 sm:p-5 rounded-2xl mb-6 shadow-lg flex items-start sm:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center text-xl flex-shrink-0 shadow-inner">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <div class="space-y-0.5">
+            <h4 class="font-extrabold text-sm text-white flex items-center gap-2">
+              <span>Payment Reference Submitted Successfully! ✓</span>
+              <span class="text-[10px] bg-white/25 px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">Under Review</span>
+            </h4>
+            <p class="text-xs text-emerald-50 leading-relaxed">
+              Your payment reference <strong class="font-mono bg-emerald-700/40 px-1.5 py-0.5 rounded text-white"><?= htmlspecialchars($booking['payment_ref'] ?? '') ?></strong> has been recorded and is currently <strong class="text-white">under administrator review</strong>. Once verified, dispatch will unlock immediately.
+            </p>
+          </div>
+        </div>
+      </div>
+    <?php endif; ?>
 
     <!-- Printable Receipt Card -->
     <div class="bg-white rounded-2xl border border-slate-200 shadow-md p-6 sm:p-10 print-shadow-none space-y-8">

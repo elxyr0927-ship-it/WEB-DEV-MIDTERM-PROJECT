@@ -1,6 +1,8 @@
 <?php
-// Start session and require login
-session_start();
+// Start session safely and require login
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
@@ -143,7 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['process_payment'])) {
                     $booking['payment_ref'] = $paymentReference;
 
                     $_SESSION['payment_submitted'] = "Payment details submitted for Shipment " . ($booking['tracking_code'] ?? ('#' . $booking['id'])) . ". Your payment reference is currently under admin verification.";
-                    header('Location: customer_dashboard.php?msg=payment_submitted');
+                    header('Location: receipt.php?id=' . $booking['id'] . '&submitted=1');
                     exit;
                 } catch (Exception $e) {
                     $pdo->rollBack();
@@ -261,6 +263,32 @@ foreach ($dbPaymentMethods as $pm) {
       </div>
     <?php endif; ?>
 
+    <!-- Payment Success / Under Review Toast Banner -->
+    <?php if ($booking['payment_status'] === 'under_review'): ?>
+      <div class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white p-4 sm:p-5 rounded-2xl mb-6 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-fade-in">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-white/20 text-white flex items-center justify-center text-lg flex-shrink-0 shadow-inner">
+            <i class="fa-solid fa-circle-check text-xl"></i>
+          </div>
+          <div>
+            <h3 class="font-extrabold text-sm text-white flex items-center gap-2">
+              <span>Payment Reference Recorded ✓</span>
+              <span class="text-[10px] bg-white/25 px-2 py-0.5 rounded-full uppercase tracking-wider font-mono">Under Review</span>
+            </h3>
+            <p class="text-xs text-emerald-50 mt-0.5 leading-relaxed">
+              Your <?= strtoupper(htmlspecialchars($booking['payment_method'] ?? 'online')) ?> payment reference <strong class="font-mono bg-emerald-700/40 px-1.5 py-0.5 rounded text-white"><?= htmlspecialchars($booking['payment_ref'] ?? '') ?></strong> is safely submitted and pending admin confirmation.
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 self-end sm:self-center flex-shrink-0">
+          <a href="receipt.php?id=<?= $booking['id'] ?>" class="bg-white hover:bg-slate-100 text-emerald-800 font-extrabold text-xs px-4 py-2 rounded-xl transition-all shadow-sm flex items-center gap-1.5">
+            <i class="fa-solid fa-receipt text-xs text-brandOrange"></i>
+            <span>Go to Receipt</span>
+          </a>
+        </div>
+      </div>
+    <?php endif; ?>
+
     <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
       <!-- Card Header -->
       <div class="bg-gradient-to-r from-brandNavy to-slate-900 text-white p-5 sm:p-6 flex justify-between items-center">
@@ -358,12 +386,18 @@ foreach ($dbPaymentMethods as $pm) {
               </div>
             <?php endif; ?>
 
-            <div class="pt-2 flex justify-center gap-3">
-              <a href="customer_dashboard.php" class="bg-brandNavy text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-slate-900 transition-colors">
-                Back to Dashboard
+            <div class="pt-2 flex flex-wrap justify-center gap-3">
+              <a href="receipt.php?id=<?= $booking['id'] ?>" class="bg-brandOrange text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors flex items-center gap-1.5 shadow-sm">
+                <i class="fa-solid fa-receipt text-[11px]"></i>
+                <span>View Official Receipt</span>
               </a>
-              <a href="tracking.php?id=<?= urlencode($booking['tracking_code'] ?? $booking['id']) ?>" class="bg-brandOrange text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors">
-                Track Shipment
+              <a href="tracking.php?id=<?= urlencode($booking['tracking_code'] ?? $booking['id']) ?>" class="bg-white border border-slate-300 text-brandNavy hover:bg-slate-50 text-xs font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5">
+                <i class="fa-solid fa-satellite-dish text-[11px] text-brandOrange"></i>
+                <span>Track Shipment</span>
+              </a>
+              <a href="customer_dashboard.php" class="bg-brandNavy text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-slate-900 transition-colors flex items-center gap-1.5">
+                <i class="fa-solid fa-arrow-left text-[11px]"></i>
+                <span>Back to Dashboard</span>
               </a>
             </div>
           </div>

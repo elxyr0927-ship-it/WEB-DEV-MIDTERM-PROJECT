@@ -1,6 +1,8 @@
 <?php
-// Start session and require admin role
-session_start();
+// Start session safely and require admin role
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header('Location: login.php');
     exit;
@@ -247,7 +249,7 @@ include __DIR__ . '/../includes/header.php';
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 min-w-0 p-4 sm:p-6 md:p-8">
+    <main class="flex-1 min-w-0 p-4 sm:p-6 md:p-8 max-w-7xl mx-auto transition-all">
         
         <!-- Header -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">

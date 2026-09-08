@@ -1,5 +1,7 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once __DIR__ . '/../database/config.php';
 require_once __DIR__ . '/../database/validation.php';
 
@@ -189,13 +191,17 @@ include __DIR__ . '/../includes/header.php';
               </div>
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">Inquiry Subject</label>
-                <select name="subject" class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange outline-none text-xs text-slate-900 transition-all">
-                  <option value="Package Status & Delivery Delay">Package Status & Delivery Delay</option>
-                  <option value="Commercial Freight Quote">Commercial Freight Quote</option>
-                  <option value="Corporate Business Account">Corporate Business Account</option>
-                  <option value="Claims & Transit Insurance">Claims & Transit Insurance</option>
-                  <option value="General Inquiries">General Inquiries</option>
-                </select>
+                <input type="text" name="subject" id="subject" list="subject-list" 
+                       placeholder="Select or type inquiry subject..."
+                       value="<?= htmlspecialchars($_POST['subject'] ?? 'General Inquiries') ?>"
+                       class="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-300 focus:bg-white focus:ring-2 focus:ring-brandOrange outline-none text-xs text-slate-900 transition-all">
+                <datalist id="subject-list">
+                  <option value="Package Status & Delivery Delay">
+                  <option value="Commercial Freight Quote">
+                  <option value="Corporate Business Account">
+                  <option value="Claims & Transit Insurance">
+                  <option value="General Inquiries">
+                </datalist>
               </div>
             </div>
 
