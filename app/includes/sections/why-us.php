@@ -1,7 +1,7 @@
     <!-- WHY CHOOSE US / WHY YOCOR EXPRESS SECTION -->
     <section id="why-us" class="py-10 sm:py-14 lg:py-16 bg-gradient-to-b from-white via-slate-50 to-white border-t border-slate-200 relative overflow-hidden">
       <div class="absolute inset-0 opacity-60 pointer-events-none flex items-center justify-center">
-        <img src="./public/why-yocor-bg.svg" alt="Express Speed Tech Light Vector Pattern" class="w-full max-w-7xl h-auto object-cover">
+        <img src="public/why-yocor-bg.svg" alt="Express Speed Tech Light Vector Pattern" class="w-full max-w-7xl h-auto object-cover">
       </div>
 
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">

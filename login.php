@@ -1,6 +1,7 @@
 <?php
-// Start session first (needed to check if already logged in)
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // If already logged in, redirect to appropriate dashboard
 if (isset($_SESSION['user_id'])) {

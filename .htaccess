@@ -1,6 +1,9 @@
 RewriteEngine On
 RewriteBase /Express/
 
+# Block .git access first (must be before other rules)
+RewriteRule ^\.git - [F,L]
+
 # If the requested file or directory exists, serve it directly (e.g. assets, svg)
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d

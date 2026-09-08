@@ -1,6 +1,7 @@
 <?php
-// Start session first
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Require login
 if (!isset($_SESSION['user_id'])) {

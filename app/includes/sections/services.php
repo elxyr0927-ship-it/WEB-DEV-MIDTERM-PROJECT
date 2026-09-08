@@ -1,7 +1,7 @@
     <!-- SERVICES / OUR SOLUTIONS SECTION -->
     <section id="services" class="py-10 sm:py-14 lg:py-16 bg-gradient-to-b from-slate-50 via-white to-slate-50 relative overflow-hidden border-b border-slate-200">
       <div class="absolute inset-0 opacity-40 pointer-events-none flex items-center justify-center">
-        <img src="./public/logistics-network-bg.svg" alt="Global Supply Chain Network Vector Background" class="w-full max-w-7xl h-auto object-cover">
+        <img src="public/logistics-network-bg.svg" alt="Global Supply Chain Network Vector Background" class="w-full max-w-7xl h-auto object-cover">
       </div>
 
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">

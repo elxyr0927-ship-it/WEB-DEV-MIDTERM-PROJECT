@@ -3,7 +3,9 @@
  * YOCOR Express Logistics - Admin Live Checkpoint & Status Timeline Manager
  * Allows administrators to continuously update hub locations and rider notes with a full historical audit trail.
  */
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 if (!isset($_SESSION['user_id']) || ($_SESSION['role'] ?? '') !== 'admin') {
     header('Location: login.php');

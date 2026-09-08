@@ -430,6 +430,16 @@ include __DIR__ . '/../includes/header.php';
         transform: rotate(90deg);
     }
     @media (min-width: 768px) {
+        .admin-sidebar {
+            position: sticky !important;
+            top: 0 !important;
+            height: 100vh !important;
+            overflow-y: auto !important;
+            transform: none !important;
+            box-shadow: none !important;
+            z-index: 30 !important;
+            margin-top: 0 !important;
+        }
         .admin-sidebar.collapsed {
             width: 4.5rem !important;
         }
@@ -452,16 +462,53 @@ include __DIR__ . '/../includes/header.php';
         }
     }
     @media (max-width: 767px) {
-        .admin-sidebar.mobile-hidden {
-            display: none !important;
+        .admin-sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 280px !important;
+            max-width: 85vw;
+            z-index: 60;
+            background: white;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25);
+            transform: translateX(-100%);
+            transition: transform 0.25s ease-in-out;
         }
+        .admin-sidebar.mobile-open {
+            transform: translateX(0);
+        }
+        .admin-sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(2px);
+            z-index: 50;
+        }
+        .admin-sidebar-backdrop.active {
+            display: block;
+        }
+        /* Prevent body horizontal scroll on mobile */
+        body { overflow-x: hidden; }
+        /* Table horizontal scroll smooth on touch */
+        .overflow-x-auto { -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+    }
+    /* Touch target minimum 44px for accessibility */
+    @media (max-width: 767px) {
+        button, a, select { min-height: 36px; touch-action: manipulation; }
     }
 </style>
 
-<div class="flex flex-col md:flex-row min-h-[calc(100vh-80px)] w-full bg-slate-50">
+<div class="flex flex-col md:flex-row min-h-screen w-full bg-slate-50">
+
+    <!-- Mobile Sidebar Backdrop Overlay -->
+    <div id="adminSidebarBackdrop" class="admin-sidebar-backdrop md:hidden"></div>
 
     <!-- Responsive Collapsible Admin Sidebar -->
-    <aside id="adminSidebar" class="admin-sidebar w-full md:w-64 bg-white border-r border-slate-200 p-4 sm:p-5 md:py-6 flex-shrink-0 md:sticky md:top-16 md:h-[calc(100vh-4rem)] md:overflow-y-auto">
+    <aside id="adminSidebar" class="admin-sidebar w-full md:w-64 bg-white border-r border-slate-200 p-4 sm:p-5 md:py-6 flex-shrink-0 md:sticky md:top-0 md:h-screen md:overflow-y-auto">
         <div class="mb-5 pb-4 border-b border-slate-100 flex items-center justify-between gap-2">
             <div class="flex items-center gap-3 overflow-hidden">
                 <div class="w-10 h-10 rounded-xl bg-brandNavy text-white flex items-center justify-center font-bold text-lg shadow-sm flex-shrink-0">
@@ -472,10 +519,16 @@ include __DIR__ . '/../includes/header.php';
                     <p class="text-[11px] text-slate-500 font-medium truncate">User: <?= htmlspecialchars($_SESSION['username']) ?></p>
                 </div>
             </div>
-            <!-- Desktop Sidebar Collapse Toggle Button -->
-            <button id="sidebarToggle" type="button" class="hidden md:flex p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-brandNavy transition-colors flex-shrink-0" title="Toggle Sidebar Width">
-                <i id="sidebarToggleIcon" class="fa-solid fa-chevron-left text-xs transition-transform"></i>
-            </button>
+            <div class="flex items-center gap-1">
+                <!-- Desktop Sidebar Collapse Toggle Button -->
+                <button id="sidebarToggle" type="button" class="hidden md:flex p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-brandNavy transition-colors flex-shrink-0" title="Toggle Sidebar Width">
+                    <i id="sidebarToggleIcon" class="fa-solid fa-chevron-left text-xs transition-transform"></i>
+                </button>
+                <!-- Mobile Sidebar Close Button -->
+                <button id="mobileSidebarClose" type="button" class="md:hidden p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-rose-600 transition-colors flex-shrink-0" title="Close Sidebar">
+                    <i class="fa-solid fa-xmark text-base"></i>
+                </button>
+            </div>
         </div>
 
         <nav class="space-y-4 text-xs font-bold">
@@ -565,8 +618,8 @@ include __DIR__ . '/../includes/header.php';
         </nav>
     </aside>
 
-    <!-- Admin Main Content Area -->
-    <main class="flex-1 min-w-0 p-3 sm:p-5 md:p-6 lg:p-8 max-w-7xl mx-auto transition-all">
+    <!-- Admin Main Content Area - Mobile optimized -->
+    <main class="flex-1 min-w-0 p-3 sm:p-5 md:p-6 lg:p-8 max-w-7xl mx-auto transition-all overflow-x-hidden">
         
         <!-- Header -->
         <div id="overview" class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
@@ -762,8 +815,8 @@ include __DIR__ . '/../includes/header.php';
                 </div>
             </div>
             
-            <!-- Bookings High Density Data Table -->
-            <div class="overflow-x-auto">
+            <!-- Bookings High Density Data Table - Mobile scrollable with touch -->
+            <div class="overflow-x-auto touch-manipulation scrollbar-thin -mx-3 sm:mx-0 px-3 sm:px-0">
                 <table class="w-full text-left text-xs border-collapse">
                     <thead class="bg-slate-50/80 text-slate-500 uppercase font-bold border-b border-slate-200 text-[10px] tracking-wider select-none">
                         <tr>
@@ -1463,6 +1516,8 @@ include __DIR__ . '/../includes/header.php';
         const sidebar = document.getElementById('adminSidebar');
         const desktopToggle = document.getElementById('sidebarToggle');
         const mobileToggle = document.getElementById('mobileSidebarToggle');
+        const mobileClose = document.getElementById('mobileSidebarClose');
+        const backdrop = document.getElementById('adminSidebarBackdrop');
 
         // Restore saved desktop state from localStorage
         if (window.innerWidth >= 768) {
@@ -1481,10 +1536,46 @@ include __DIR__ . '/../includes/header.php';
             });
         }
 
-        // Mobile toggle handler (hide/show on smaller screens)
-        if (mobileToggle && sidebar) {
-            mobileToggle.addEventListener('click', function() {
-                sidebar.classList.toggle('mobile-hidden');
+        // Mobile drawer handlers
+        function openMobileSidebar() {
+            if (sidebar) sidebar.classList.add('mobile-open');
+            if (backdrop) backdrop.classList.add('active');
+            document.body.classList.add('overflow-hidden');
+        }
+
+        function closeMobileSidebar() {
+            if (sidebar) sidebar.classList.remove('mobile-open');
+            if (backdrop) backdrop.classList.remove('active');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        if (mobileToggle) {
+            mobileToggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (sidebar && sidebar.classList.contains('mobile-open')) {
+                    closeMobileSidebar();
+                } else {
+                    openMobileSidebar();
+                }
+            });
+        }
+
+        if (mobileClose) {
+            mobileClose.addEventListener('click', closeMobileSidebar);
+        }
+
+        if (backdrop) {
+            backdrop.addEventListener('click', closeMobileSidebar);
+        }
+
+        // Auto close mobile sidebar when a navigation link is clicked
+        if (sidebar) {
+            sidebar.querySelectorAll('nav a').forEach(function(link) {
+                link.addEventListener('click', function() {
+                    if (window.innerWidth < 768) {
+                        closeMobileSidebar();
+                    }
+                });
             });
         }
     });

@@ -57,6 +57,9 @@ if (!empty($page) && isset($routes[$page])) {
 }
 
 // Otherwise, render Home Page
+require_once __DIR__ . '/app/database/config.php';
+require_once __DIR__ . '/app/database/validation.php';
+
 $pageTitle = "YOCOR Express Logistic | Premier Global Logistics & Transport";
 $activeNav = "home";
 

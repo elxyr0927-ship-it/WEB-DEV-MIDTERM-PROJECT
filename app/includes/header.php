@@ -18,6 +18,7 @@ if (!isset($activeNav)) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?php echo htmlspecialchars($pageTitle); ?></title>
   <meta name="description" content="YOCOR Express Logistic provides fast, secure, and reliable express delivery, freight forwarding, warehousing, and supply chain solutions worldwide.">
+  <base href="/Express/">
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>

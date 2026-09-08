@@ -55,7 +55,7 @@ if (!$booking) {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Receipt Not Found | YOCOR Express</title>
       <script src="https://cdn.tailwindcss.com"></script>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
       <script>
         tailwind.config = {
           theme: {
@@ -107,7 +107,7 @@ if ($_SESSION['role'] !== 'admin' && (int)$_SESSION['user_id'] !== (int)$booking
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Access Denied | YOCOR Express</title>
       <script src="https://cdn.tailwindcss.com"></script>
-      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
       <script>
         tailwind.config = {
           theme: {
@@ -164,7 +164,7 @@ $pageTitle = "Official Waybill Receipt - {$displayCode} | YOCOR Express";
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= htmlspecialchars($pageTitle) ?></title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script>
     tailwind.config = {
       theme: {
@@ -185,25 +185,25 @@ $pageTitle = "Official Waybill Receipt - {$displayCode} | YOCOR Express";
     }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-900 py-8 px-4 sm:px-6 font-sans antialiased min-h-screen flex flex-col justify-between">
+<body class="bg-slate-100 text-slate-900 py-6 sm:py-8 px-3 sm:px-6 font-sans antialiased min-h-screen flex flex-col justify-between overflow-x-hidden">
 
   <div class="max-w-3xl mx-auto w-full">
 
-    <!-- Action Bar (Hide on Print) -->
-    <div class="no-print flex items-center justify-between mb-5">
+    <!-- Action Bar (Hide on Print) - Mobile stacked -->
+    <div class="no-print flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-5">
       <a href="<?= $_SESSION['role'] === 'admin' ? 'admin_dashboard.php' : 'customer_dashboard.php' ?>" 
-         class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-brandOrange transition-colors">
+         class="inline-flex items-center justify-center sm:justify-start gap-1.5 text-xs font-bold text-slate-600 hover:text-brandOrange transition-colors min-h-[44px] px-2">
         <i class="fa-solid fa-arrow-left"></i>
         <span>Back to <?= $_SESSION['role'] === 'admin' ? 'Admin Center' : 'My Orders' ?></span>
       </a>
 
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center justify-center sm:justify-end gap-2">
         <?php if (!$isPaid && $_SESSION['role'] !== 'admin'): ?>
-          <a href="payment.php?id=<?= $booking['id'] ?>" class="bg-brandOrange text-white font-bold text-xs px-3.5 py-1.5 rounded-lg hover:bg-orange-600 transition-colors shadow">
-            <i class="fa-solid fa-credit-card mr-1"></i> Pay Now
+          <a href="payment.php?id=<?= $booking['id'] ?>" class="flex-1 sm:flex-none inline-flex items-center justify-center bg-brandOrange text-white font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-orange-600 transition-colors shadow min-h-[44px]">
+            <i class="fa-solid fa-credit-card mr-1.5"></i> Pay Now
           </a>
         <?php endif; ?>
-        <button onclick="window.print()" class="bg-brandNavy text-white font-bold text-xs px-3.5 py-1.5 rounded-lg hover:bg-slate-900 transition-colors flex items-center gap-1.5 shadow">
+        <button onclick="window.print()" class="flex-1 sm:flex-none inline-flex items-center justify-center bg-brandNavy text-white font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-slate-900 transition-colors gap-1.5 shadow min-h-[44px]">
           <i class="fa-solid fa-print"></i>
           <span>Print / Save PDF</span>
         </button>
@@ -231,8 +231,8 @@ $pageTitle = "Official Waybill Receipt - {$displayCode} | YOCOR Express";
       </div>
     <?php endif; ?>
 
-    <!-- Printable Receipt Card -->
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-md p-6 sm:p-10 print-shadow-none space-y-8">
+    <!-- Printable Receipt Card - Mobile optimized -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-md p-4 sm:p-10 print-shadow-none space-y-6 sm:space-y-8 overflow-hidden">
       
       <!-- Top Brand & Receipt Header -->
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-6">
@@ -328,11 +328,11 @@ $pageTitle = "Official Waybill Receipt - {$displayCode} | YOCOR Express";
         </div>
       </div>
 
-      <!-- Itemized Pricing Breakdown Table -->
+      <!-- Itemized Pricing Breakdown Table - Mobile scrollable -->
       <div>
         <h5 class="font-black text-brandNavy uppercase tracking-wider text-xs mb-2">Itemized Charges</h5>
-        <div class="border border-slate-200 rounded-xl overflow-hidden text-xs">
-          <table class="w-full text-left">
+        <div class="border border-slate-200 rounded-xl overflow-hidden text-xs overflow-x-auto -mx-4 sm:mx-0 scroll-smooth">
+          <table class="w-full text-left min-w-[520px]">
             <thead class="bg-slate-50 font-bold text-slate-600 border-b border-slate-200 text-[11px]">
               <tr>
                 <th class="px-4 py-2.5">Charge Description</th>
@@ -381,8 +381,8 @@ $pageTitle = "Official Waybill Receipt - {$displayCode} | YOCOR Express";
         </div>
       </div>
 
-      <!-- Footer Notes & Barcode Simulation -->
-      <div class="border-t border-slate-200 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left text-[11px] text-slate-400">
+      <!-- Footer Notes & Barcode Simulation - Mobile centered -->
+      <div class="border-t border-slate-200 pt-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left text-[11px] text-slate-400 px-1">
         <div>
           <p class="font-bold text-slate-600">Thank you for choosing YOCOR Express!</p>
           <p>This document serves as an official electronic delivery receipt and proof of waybill creation.</p>

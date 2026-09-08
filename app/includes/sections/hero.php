@@ -64,7 +64,7 @@
 
         <!-- YOCOR Delivery Fleet & Skyline Vector Banner -->
         <div class="mt-8 sm:mt-12 lg:mt-14 pt-4 sm:pt-6 border-t border-white/10 relative z-10 w-full overflow-hidden flex justify-center">
-          <img src="./public/truck design.svg" alt="YOCOR Express Delivery Fleet, Courier & Skyline Illustration" class="w-full max-w-6xl h-auto object-contain filter drop-shadow-2xl hero-truck-overlay">
+          <img src="public/truck%20design.svg" alt="YOCOR Express Delivery Fleet, Courier & Skyline Illustration" class="w-full max-w-6xl h-auto object-contain filter drop-shadow-2xl hero-truck-overlay">
         </div>
 
       </div>

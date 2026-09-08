@@ -1,20 +1,21 @@
 <?php
-// Dynamically query available active courier services from database
+require_once __DIR__ . '/../../database/config.php';
+require_once __DIR__ . '/../../database/validation.php';
+
+// Dynamically query available active courier services from database (matches booking.php exactly)
 $activeServices = [];
-if (function_exists('getConnection')) {
-    try {
-        $q_pdo = getConnection();
-        $q_stmt = $q_pdo->query("SELECT id, name, description, capacity, base_price, price_per_kg FROM services WHERE capacity > 0 AND is_active = 1 ORDER BY id ASC");
-        $activeServices = $q_stmt->fetchAll(PDO::FETCH_ASSOC);
-    } catch (Exception $e) {
-        $activeServices = [];
-    }
+try {
+    $q_pdo = getConnection();
+    $q_stmt = $q_pdo->query("SELECT id, name, description, capacity, base_price, price_per_kg FROM services WHERE capacity > 0 AND is_active = 1 ORDER BY id ASC");
+    $activeServices = $q_stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $activeServices = [];
 }
 ?>
     <!-- RATE CALCULATOR / INSTANT ESTIMATE SECTION -->
     <section id="quote" class="py-10 sm:py-14 lg:py-16 bg-gradient-to-b from-slate-50 via-white to-slate-100 border-t border-slate-200 relative overflow-hidden">
       <div class="absolute inset-0 opacity-50 pointer-events-none flex items-center justify-center">
-        <img src="./public/calculator-bg.svg" alt="Express Shipping Rate Calculator Vector Pattern" class="w-full max-w-7xl h-auto object-cover">
+        <img src="public/calculator-bg.svg" alt="Express Shipping Rate Calculator Vector Pattern" class="w-full max-w-7xl h-auto object-cover">
       </div>
 
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
