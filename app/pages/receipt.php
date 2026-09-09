@@ -27,7 +27,7 @@ if (!$bookingId && empty($trackingCode)) {
 // Fetch booking with user & service details
 if ($bookingId) {
     $stmt = $pdo->prepare("
-        SELECT b.*, s.name AS service_name, s.base_price, s.price_per_kg, u.username, u.email 
+        SELECT b.*, s.name AS service_name, s.base_price, s.price_per_kg, u.username, u.email, u.phone, u.age 
         FROM bookings b 
         JOIN services s ON b.service_id = s.id 
         JOIN user u ON b.user_id = u.id 
@@ -36,7 +36,7 @@ if ($bookingId) {
     $stmt->execute(['id' => $bookingId]);
 } else {
     $stmt = $pdo->prepare("
-        SELECT b.*, s.name AS service_name, s.base_price, s.price_per_kg, u.username, u.email 
+        SELECT b.*, s.name AS service_name, s.base_price, s.price_per_kg, u.username, u.email, u.phone, u.age 
         FROM bookings b 
         JOIN services s ON b.service_id = s.id 
         JOIN user u ON b.user_id = u.id 
@@ -304,6 +304,7 @@ $pageTitle = "Official Waybill Receipt - {$displayCode} | YOCOR Express";
           <p class="text-slate-700 font-bold text-sm"><?= htmlspecialchars($booking['username']) ?></p>
           <p class="text-slate-500 font-medium">Account ID: <span class="font-mono text-slate-700 font-bold">#<?= $booking['user_id'] ?></span></p>
           <p class="text-slate-500 font-medium">Email: <?= htmlspecialchars($booking['email']) ?></p>
+          <p class="text-slate-500 font-medium">Phone: <span class="text-slate-700 font-semibold"><?= !empty($booking['phone']) ? htmlspecialchars($booking['phone']) : '<em class="text-slate-400 font-normal">Not provided</em>' ?></span></p>
         </div>
 
         <div class="bg-slate-50 rounded-xl p-4 border border-slate-200/80 space-y-2">
