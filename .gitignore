@@ -4,3 +4,6 @@ deepseekview.md
 graphify-out/
 organized_backup/
 scripts/
+.env
+.env.*
+hash.txt
