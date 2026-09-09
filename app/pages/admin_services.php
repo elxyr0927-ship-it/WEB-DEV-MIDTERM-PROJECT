@@ -142,6 +142,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_active']) && e
     }
 }
 
+// 4. Handle Permanent Delete Service Tier
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_service']) && empty($error)) {
+    $serviceId = filter_input(INPUT_POST, 'service_id', FILTER_VALIDATE_INT);
+    if ($serviceId) {
+        // Check if any bookings exist for this service
+        $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM bookings WHERE service_id = :id");
+        $checkStmt->execute(['id' => $serviceId]);
+        $bookingCount = (int)$checkStmt->fetchColumn();
+
+        if ($bookingCount > 0) {
+            $error = "Cannot permanently delete service: {$bookingCount} existing shipment(s) reference this tier. Please deactivate it instead.";
+        } else {
+            try {
+                $delStmt = $pdo->prepare("DELETE FROM services WHERE id = :id");
+                $delStmt->execute(['id' => $serviceId]);
+                $success = "Service #{$serviceId} permanently deleted from catalog.";
+                logAdminAction($pdo, (int)$_SESSION['user_id'], 'DELETE_SERVICE', "Permanently deleted service #{$serviceId}");
+            } catch (PDOException $e) {
+                $error = 'Failed to delete service: ' . $e->getMessage();
+            }
+        }
+    } else {
+        $error = 'Invalid service ID for deletion.';
+    }
+}
+
 // Fetch all services with total bookings count
 $services = $pdo->query("
     SELECT s.*, 
@@ -188,12 +214,11 @@ include __DIR__ . '/../includes/header.php';
                     <i class="fa-solid fa-boxes-packing text-slate-400 text-sm w-4 text-center flex-shrink-0"></i>
                     <span class="truncate">Customer Shipments</span>
                 </a>
-                <a href="tracking.php" target="_blank" class="flex items-center justify-between px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors" title="Live Tracker">
+                <a href="tracking.php" class="flex items-center justify-between px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors" title="Live Tracker">
                     <div class="flex items-center gap-3 truncate">
                         <i class="fa-solid fa-magnifying-glass-location text-slate-400 text-sm w-4 text-center flex-shrink-0"></i>
                         <span class="truncate">Live Tracker</span>
                     </div>
-                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-300"></i>
                 </a>
             </div>
 
@@ -217,6 +242,9 @@ include __DIR__ . '/../includes/header.php';
                         </a>
                         <a href="admin_dashboard.php#regional-rates" class="flex items-center py-1.5 px-2.5 rounded-lg text-slate-600 hover:text-brandNavy hover:bg-slate-100 transition-colors text-[11px]">
                             <span class="truncate">Transit Rates</span>
+                        </a>
+                        <a href="admin_dashboard.php#payment-settings" class="flex items-center py-1.5 px-2.5 rounded-lg text-slate-600 hover:text-brandNavy hover:bg-slate-100 transition-colors text-[11px]">
+                            <span class="truncate">Payment Methods</span>
                         </a>
                     </div>
                 </details>
@@ -334,24 +362,37 @@ include __DIR__ . '/../includes/header.php';
                     </div>
 
                     <!-- Card Actions -->
-                    <div class="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between gap-2">
-                        <!-- Toggle Soft Delete -->
-                        <form method="POST" action="" onsubmit="return confirm('Change active status for <?= htmlspecialchars($srv['name']) ?>?');">
-                            <?= csrfField() ?>
-                            <input type="hidden" name="service_id" value="<?= $srv['id'] ?>">
-                            <input type="hidden" name="target_active" value="<?= $isActive ? 0 : 1 ?>">
-                            <button type="submit" name="toggle_active" 
-                                    class="text-xs font-bold px-3 py-1.5 rounded-lg border transition-colors <?= $isActive ? 'border-rose-200 text-rose-600 hover:bg-rose-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50' ?>">
-                                <?= $isActive ? '<i class="fa-solid fa-power-off text-[10px] mr-1"></i> Deactivate' : '<i class="fa-solid fa-check text-[10px] mr-1"></i> Activate' ?>
-                            </button>
-                        </form>
+                    <div class="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between gap-2 flex-wrap">
+                        <div class="flex items-center gap-1.5">
+                            <!-- Toggle Soft Delete -->
+                            <form method="POST" action="" onsubmit="return confirm('Change active status for <?= htmlspecialchars($srv['name']) ?>?');">
+                                <?= csrfField() ?>
+                                <input type="hidden" name="service_id" value="<?= $srv['id'] ?>">
+                                <input type="hidden" name="target_active" value="<?= $isActive ? 0 : 1 ?>">
+                                <button type="submit" name="toggle_active" 
+                                        class="text-xs font-bold px-2.5 py-1.5 rounded-lg border transition-colors <?= $isActive ? 'border-amber-200 text-amber-700 hover:bg-amber-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50' ?>">
+                                    <?= $isActive ? '<i class="fa-solid fa-power-off text-[10px] mr-1"></i> Deactivate' : '<i class="fa-solid fa-check text-[10px] mr-1"></i> Activate' ?>
+                                </button>
+                            </form>
+
+                            <!-- Permanent Delete Button -->
+                            <form method="POST" action="" onsubmit="return confirm('Permanently delete courier tier «<?= htmlspecialchars($srv['name']) ?>»? This cannot be undone.');">
+                                <?= csrfField() ?>
+                                <input type="hidden" name="service_id" value="<?= $srv['id'] ?>">
+                                <button type="submit" name="delete_service" 
+                                        class="text-xs font-bold px-2.5 py-1.5 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors"
+                                        title="Permanently Delete Tier">
+                                    <i class="fa-regular fa-trash-can text-[10px] mr-1"></i> Delete
+                                </button>
+                            </form>
+                        </div>
 
                         <!-- Edit Button (Opens modal prefilled) -->
                         <button type="button" 
                                 onclick="openEditModal(<?= htmlspecialchars(json_encode($srv), ENT_QUOTES, 'UTF-8') ?>)"
                                 class="bg-slate-100 hover:bg-slate-200 text-brandNavy font-bold text-xs px-3.5 py-1.5 rounded-lg transition-colors flex items-center gap-1.5">
                             <i class="fa-solid fa-pen text-[10px]"></i>
-                            <span>Edit Service</span>
+                            <span>Edit</span>
                         </button>
                     </div>
                 </div>

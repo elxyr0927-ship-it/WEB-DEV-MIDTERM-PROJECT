@@ -33,7 +33,7 @@ function getConnection(): PDO
 
 /**
  * Generate a unique tracking code formatted like YR-XXXXXX
- * Simple and beginner-friendly for college midterm defense
+
  */
 function generateTrackingCode(PDO $pdo): string
 {

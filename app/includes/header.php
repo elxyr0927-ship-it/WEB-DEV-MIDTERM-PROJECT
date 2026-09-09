@@ -1,8 +1,7 @@
 <?php
+require_once __DIR__ . '/../database/helper.php';
+startSecureSession();
 
-if (session_status() === PHP_SESSION_NONE){
-  session_start();
-}
 // Default page title and active nav indicator
 if (!isset($pageTitle)) {
     $pageTitle = "YOCOR Express Logistic | Premier Global Logistics & Transport";

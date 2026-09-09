@@ -64,8 +64,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_tracker']) && 
             $checkStmt->execute(['id' => $booking_id]);
             $currStatus = $checkStmt->fetchColumn();
 
-            if ($currStatus === 'delivered') {
-                $error = "Cannot modify tracker fields: This shipment has already been delivered and is locked.";
+            if ($currStatus === 'delivered' || $currStatus === 'cancelled') {
+                $error = "Cannot modify tracker fields: This shipment is " . htmlspecialchars($currStatus) . " and locked.";
+            } elseif (!$currStatus) {
+                $error = "Shipment not found.";
             } else {
                 $pdo->beginTransaction();
                 $uStmt = $pdo->prepare("
@@ -160,26 +162,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (isset($_POST['update_status']) || 
     }
 }
 
-// Handle deleting delivered booking
+// Handle deleting delivered/cancelled booking (allow delete for both terminal statuses)
 $deleteSuccess = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_booking']) && empty($error)) {
     $booking_id = filter_input(INPUT_POST, 'booking_id', FILTER_VALIDATE_INT);
     
     if ($booking_id) {
         try {
-            // Verify booking is indeed 'delivered' before allowing deletion
+            // Verify booking is 'delivered' or 'cancelled' before allowing deletion
             $checkStmt = $pdo->prepare("SELECT id, tracking_code, status FROM bookings WHERE id = :id");
             $checkStmt->execute(['id' => $booking_id]);
             $targetBooking = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
-            if ($targetBooking && $targetBooking['status'] === 'delivered') {
-                $delStmt = $pdo->prepare("DELETE FROM bookings WHERE id = :id AND status = 'delivered'");
+            if ($targetBooking && in_array($targetBooking['status'], ['delivered', 'cancelled'], true)) {
+                $delStmt = $pdo->prepare("DELETE FROM bookings WHERE id = :id AND status IN ('delivered','cancelled')");
                 $delStmt->execute(['id' => $booking_id]);
                 $code = $targetBooking['tracking_code'] ?? ('#' . $booking_id);
-                $deleteSuccess = "Delivered parcel [{$code}] has been permanently archived/deleted.";
-                logAdminAction($pdo, (int)$_SESSION['user_id'], 'ARCHIVE_PARCEL', "Permanently deleted delivered parcel {$code} (Booking #{$booking_id})");
+                $deleteSuccess = ucfirst($targetBooking['status']) . " parcel [{$code}] has been permanently archived/deleted.";
+                logAdminAction($pdo, (int)$_SESSION['user_id'], 'ARCHIVE_PARCEL', "Permanently deleted {$targetBooking['status']} parcel {$code} (Booking #{$booking_id})");
             } else {
-                $error = "Only parcels with 'Delivered' status can be deleted.";
+                $error = "Only parcels with 'Delivered' or 'Cancelled' status can be deleted.";
             }
         } catch (PDOException $e) {
             $error = 'Failed to delete parcel: ' . $e->getMessage();
@@ -189,7 +191,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_booking']) && 
     }
 }
 
-// Handle capacity update
+// Handle batch update for all service capacities, base prices, and per-kg rates at once
+$batchServiceSuccess = false;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_all_services']) && empty($error)) {
+    $caps = $_POST['services_capacity'] ?? [];
+    $bases = $_POST['services_base_price'] ?? [];
+    $kgs = $_POST['services_price_per_kg'] ?? [];
+
+    $updatedCount = 0;
+    try {
+        $stmt = $pdo->prepare("UPDATE services SET capacity = :cap, base_price = :base, price_per_kg = :kg WHERE id = :id AND is_active = 1");
+        foreach ($caps as $sId => $capVal) {
+            $sIdInt = filter_var($sId, FILTER_VALIDATE_INT);
+            if (!$sIdInt) continue;
+
+            $cVal = (int)($capVal ?? 0);
+            $bVal = (float)($bases[$sId] ?? 100);
+            $kVal = (float)($kgs[$sId] ?? 40);
+
+            if ($cVal >= 0 && $bVal >= 0 && $kVal >= 0) {
+                $stmt->execute([
+                    'cap'  => $cVal,
+                    'base' => $bVal,
+                    'kg'   => $kVal,
+                    'id'   => $sIdInt
+                ]);
+                $updatedCount++;
+            }
+        }
+
+        if ($updatedCount > 0) {
+            $batchServiceSuccess = "Successfully updated {$updatedCount} active courier service tier(s) in batch.";
+            logAdminAction($pdo, (int)$_SESSION['user_id'], 'BATCH_UPDATE_SERVICES', "Batch updated {$updatedCount} services (capacities & pricing)");
+        }
+    } catch (PDOException $e) {
+        $error = 'Failed to batch update services: ' . $e->getMessage();
+    }
+}
+
+// Handle single capacity update
 $capacitySuccess = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_capacity']) && empty($error)) {
     $service_id = filter_input(INPUT_POST, 'service_id', FILTER_VALIDATE_INT);
@@ -341,6 +381,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_message_read']) 
     }
 }
 
+// Handle deleting / archiving contact message
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_contact_message']) && empty($error)) {
+    $msgId = filter_input(INPUT_POST, 'message_id', FILTER_VALIDATE_INT);
+    if ($msgId) {
+        try {
+            $stmt = $pdo->prepare("UPDATE contact_messages SET deleted_at = NOW() WHERE id = :id");
+            $stmt->execute(['id' => $msgId]);
+            $deleteSuccess = "Inquiry #{$msgId} has been archived/deleted.";
+            logAdminAction($pdo, (int)$_SESSION['user_id'], 'DELETE_MESSAGE', "Deleted inquiry #{$msgId}");
+        } catch (PDOException $e) {
+            $error = 'Failed to delete inquiry: ' . $e->getMessage();
+        }
+    }
+}
+
+// Handle clearing audit logs
+$clearLogsSuccess = false;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['clear_audit_logs']) && empty($error)) {
+    try {
+        $pdo->exec("TRUNCATE TABLE admin_logs");
+        $clearLogsSuccess = true;
+        $updateSuccess = "All audit logs have been successfully cleared.";
+    } catch (PDOException $e) {
+        $error = 'Failed to clear audit logs: ' . $e->getMessage();
+    }
+}
+
 // Status & Search filters for bookings table
 $statusFilter = trim($_GET['status'] ?? 'all');
 $validFilters = ['all', 'pending', 'dispatched', 'delivered', 'unpaid', 'under_review'];
@@ -388,8 +455,8 @@ $underReviewCount = (int)$pdo->query("SELECT COUNT(*) FROM bookings WHERE paymen
 $readyToDispatchCount = (int)$pdo->query("SELECT COUNT(*) FROM bookings WHERE status = 'pending' AND payment_status = 'paid'")->fetchColumn();
 $deliveredTodayCount = (int)$pdo->query("SELECT COUNT(*) FROM bookings WHERE status = 'delivered' AND DATE(created_at) = CURDATE()")->fetchColumn();
 
-// Fetch all services for capacity and rate management
-$services = $pdo->query("SELECT * FROM services ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+// Fetch all active services for capacity and rate management (exclude deactivated/deleted tiers)
+$services = $pdo->query("SELECT * FROM services WHERE is_active = 1 ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 // Fetch all regional island route rates
 $regionalRatesList = $pdo->query("SELECT * FROM regional_rates ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
@@ -400,10 +467,11 @@ $adminPaymentMethods = getPaymentMethods($pdo, false);
 // Fetch recent contact inquiries
 $contactMessages = $pdo->query("
     SELECT * FROM contact_messages 
+    WHERE deleted_at IS NULL
     ORDER BY created_at DESC 
     LIMIT 20
 ")->fetchAll(PDO::FETCH_ASSOC);
-$unreadMessagesCount = (int)$pdo->query("SELECT COUNT(*) FROM contact_messages WHERE is_read = 0")->fetchColumn();
+$unreadMessagesCount = (int)$pdo->query("SELECT COUNT(*) FROM contact_messages WHERE is_read = 0 AND deleted_at IS NULL")->fetchColumn();
 
 // Fetch recent admin audit logs
 $adminLogs = $pdo->query("
@@ -534,7 +602,7 @@ include __DIR__ . '/../includes/header.php';
         <nav class="space-y-4 text-xs font-bold">
             <!-- 1. DASHBOARD -->
             <div class="space-y-1">
-                <a href="#overview" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-brandNavy/5 text-brandNavy hover:bg-brandNavy/10 transition-colors" title="Overview & Stats">
+                <a href="admin_dashboard.php#overview" class="flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-brandNavy/5 text-brandNavy hover:bg-brandNavy/10 transition-colors" title="Overview & Stats">
                     <i class="fa-solid fa-chart-pie text-brandOrange text-sm w-4 text-center flex-shrink-0"></i>
                     <span class="truncate">Overview & Stats</span>
                 </a>
@@ -543,16 +611,15 @@ include __DIR__ . '/../includes/header.php';
             <!-- 2. OPERATIONS -->
             <div class="space-y-1">
                 <div class="sidebar-heading px-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Operations</div>
-                <a href="#all-bookings" class="flex items-center gap-3 px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors" title="Customer Shipments">
+                <a href="admin_dashboard.php#all-bookings" class="flex items-center gap-3 px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors" title="Customer Shipments">
                     <i class="fa-solid fa-boxes-packing text-slate-400 text-sm w-4 text-center flex-shrink-0"></i>
                     <span class="truncate">Customer Shipments</span>
                 </a>
-                <a href="tracking.php" target="_blank" class="flex items-center justify-between px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors" title="Live Tracker (Opens page)">
+                <a href="tracking.php" class="flex items-center justify-between px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors" title="Live Tracker">
                     <div class="flex items-center gap-3 truncate">
                         <i class="fa-solid fa-magnifying-glass-location text-slate-400 text-sm w-4 text-center flex-shrink-0"></i>
                         <span class="truncate">Live Tracker</span>
                     </div>
-                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-300"></i>
                 </a>
             </div>
 
@@ -570,15 +637,14 @@ include __DIR__ . '/../includes/header.php';
                     <div class="nested-nav pl-7 pr-2 pt-1 pb-1 space-y-1 border-l-2 border-slate-100 ml-4.5 mt-1">
                         <a href="admin_services.php" class="flex items-center justify-between py-1.5 px-2.5 rounded-lg text-slate-600 hover:text-brandNavy hover:bg-slate-100 transition-colors text-[11px]" title="Manage Tiers & Fleet">
                             <span class="truncate">Services & Fleet</span>
-                            <i class="fa-solid fa-arrow-up-right-from-square text-[9px] text-slate-300"></i>
                         </a>
-                        <a href="#capacities" class="flex items-center py-1.5 px-2.5 rounded-lg text-slate-600 hover:text-brandNavy hover:bg-slate-100 transition-colors text-[11px]">
+                        <a href="admin_dashboard.php#capacities" class="flex items-center py-1.5 px-2.5 rounded-lg text-slate-600 hover:text-brandNavy hover:bg-slate-100 transition-colors text-[11px]">
                             <span class="truncate">Daily Capacities</span>
                         </a>
-                        <a href="#regional-rates" class="flex items-center py-1.5 px-2.5 rounded-lg text-slate-600 hover:text-brandNavy hover:bg-slate-100 transition-colors text-[11px]">
+                        <a href="admin_dashboard.php#regional-rates" class="flex items-center py-1.5 px-2.5 rounded-lg text-slate-600 hover:text-brandNavy hover:bg-slate-100 transition-colors text-[11px]">
                             <span class="truncate">Transit Rates</span>
                         </a>
-                        <a href="#payment-settings" class="flex items-center py-1.5 px-2.5 rounded-lg text-slate-600 hover:text-brandNavy hover:bg-slate-100 transition-colors text-[11px]">
+                        <a href="admin_dashboard.php#payment-settings" class="flex items-center py-1.5 px-2.5 rounded-lg text-slate-600 hover:text-brandNavy hover:bg-slate-100 transition-colors text-[11px]">
                             <span class="truncate">Payment Methods</span>
                         </a>
                     </div>
@@ -599,7 +665,7 @@ include __DIR__ . '/../includes/header.php';
                         </span>
                     <?php endif; ?>
                 </a>
-                <a href="#audit-logs" class="flex items-center gap-3 px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors" title="Security Audit Logs">
+                <a href="admin_dashboard.php#audit-logs" class="flex items-center gap-3 px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors" title="Security Audit Logs">
                     <i class="fa-solid fa-clock-rotate-left text-slate-400 text-sm w-4 text-center flex-shrink-0"></i>
                     <span class="truncate">Audit Trail</span>
                 </a>
@@ -668,6 +734,13 @@ include __DIR__ . '/../includes/header.php';
             <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-3.5 py-2.5 rounded-xl mb-4 text-xs font-bold flex items-center gap-2 shadow-sm">
                 <i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i> 
                 <span><?= htmlspecialchars($rateSuccess) ?></span>
+            </div>
+        <?php endif; ?>
+
+        <?php if (!empty($batchServiceSuccess)): ?>
+            <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-3.5 py-2.5 rounded-xl mb-4 text-xs font-bold flex items-center gap-2 shadow-sm">
+                <i class="fa-solid fa-circle-check text-emerald-600 text-sm"></i> 
+                <span><?= htmlspecialchars($batchServiceSuccess) ?></span>
             </div>
         <?php endif; ?>
 
@@ -1066,13 +1139,13 @@ include __DIR__ . '/../includes/header.php';
                                                 <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
                                             </a>
 
-                                            <?php if ($isDelivered): ?>
-                                                <form method="POST" action="" onsubmit="return confirm('Permanently delete delivered parcel #<?= htmlspecialchars($booking['tracking_code'] ?? $booking['id']) ?>?');" class="inline">
+                                            <?php if ($isDelivered || $isCancelled): ?>
+                                                <form method="POST" action="" onsubmit="return confirm('Permanently delete <?= htmlspecialchars($booking['status']) ?> parcel #<?= htmlspecialchars($booking['tracking_code'] ?? $booking['id']) ?>?');" class="inline">
                                                     <?= csrfField() ?>
                                                     <input type="hidden" name="booking_id" value="<?= $booking['id'] ?>">
                                                     <button type="submit" name="delete_booking" 
                                                             class="inline-flex items-center gap-1 text-[11px] text-rose-600 hover:text-rose-800 font-bold px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 transition-colors"
-                                                            title="Archive Delivered Parcel">
+                                                            title="Archive <?= ucfirst($booking['status']) ?> Parcel">
                                                         <i class="fa-regular fa-trash-can text-[10px]"></i>
                                                     </button>
                                                 </form>
@@ -1089,85 +1162,81 @@ include __DIR__ . '/../includes/header.php';
 
         <!-- Manage Service Fleet & Pricing Section -->
         <div id="capacities" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-            <div class="px-5 py-3 border-b border-slate-200 bg-slate-50/60 flex items-center justify-between">
-                <div>
-                    <h2 class="font-bold text-brandNavy text-sm flex items-center gap-2">
-                        <i class="fa-solid fa-cubes text-brandOrange"></i>
-                        <span>Manage Service Fleet, Capacities & Base Rates</span>
-                    </h2>
-                    <p class="text-[11px] text-slate-500">Update daily booking slots, starting base price, and additional rate per kilogram.</p>
+            <form method="POST" action="">
+                <?= csrfField() ?>
+                <div class="px-5 py-3 border-b border-slate-200 bg-slate-50/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <div>
+                        <h2 class="font-bold text-brandNavy text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-cubes text-brandOrange"></i>
+                            <span>Manage Service Fleet, Capacities & Base Rates</span>
+                        </h2>
+                        <p class="text-[11px] text-slate-500">Edit any capacity slot or price rate simultaneously, then click "Save All Changes" to update all tiers at once.</p>
+                    </div>
+                    <button type="submit" name="update_all_services" 
+                            class="bg-brandOrange hover:bg-orange-600 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-sm transition-colors flex items-center gap-1.5 flex-shrink-0">
+                        <i class="fa-solid fa-floppy-disk text-xs"></i>
+                        <span>Save All Changes</span>
+                    </button>
                 </div>
-            </div>
-            <div class="p-5">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <?php foreach ($services as $service): ?>
-                        <div class="border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow bg-slate-50/40 flex flex-col justify-between">
-                            <div>
-                                <div class="flex items-center justify-between mb-2">
-                                    <h3 class="font-bold text-brandNavy text-xs"><?= htmlspecialchars($service['name']) ?></h3>
-                                    <?php if ($service['capacity'] > 0): ?>
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                                            <?= $service['capacity'] ?> Slots
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
-                                            Full
-                                        </span>
-                                    <?php endif; ?>
-                                </div>
-                                
-                                <p class="text-[11px] text-slate-600 mb-3 line-clamp-2">
-                                    <?= htmlspecialchars($service['description']) ?>
-                                </p>
-                            </div>
-                            
-                            <div class="space-y-3 pt-3 border-t border-slate-200/80">
-                                <!-- Capacity Editor -->
-                                <div class="flex items-center justify-between gap-2">
-                                    <div>
-                                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Capacity</p>
-                                    </div>
-                                    <form method="POST" class="flex items-center gap-1">
-                                        <?= csrfField() ?>
-                                        <input type="hidden" name="service_id" value="<?= $service['id'] ?>">
-                                        <input type="number" name="new_capacity" min="0" 
-                                               value="<?= $service['capacity'] ?>"
-                                               class="w-16 px-2 py-1 rounded-md bg-white border border-slate-300 focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none text-xs font-bold text-center">
-                                        <button type="submit" name="update_capacity"
-                                                class="bg-brandNavy hover:bg-slate-900 text-white font-bold px-2 py-1 rounded-md transition-all text-[11px] shadow-sm">
-                                            Set
-                                        </button>
-                                    </form>
-                                </div>
-
-                                <!-- Service Pricing Editor -->
-                                <form method="POST" class="pt-2 border-t border-slate-100 flex flex-col gap-2">
-                                    <?= csrfField() ?>
-                                    <input type="hidden" name="service_id" value="<?= $service['id'] ?>">
-                                    <div class="grid grid-cols-2 gap-2 text-[11px]">
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Base Price (₱)</label>
-                                            <input type="number" step="0.01" min="0" name="base_price" 
-                                                   value="<?= htmlspecialchars($service['base_price'] ?? 100) ?>" 
-                                                   class="w-full px-2 py-1 rounded-md bg-white border border-slate-300 focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none text-xs font-bold">
-                                        </div>
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Per Kg (₱)</label>
-                                            <input type="number" step="0.01" min="0" name="price_per_kg" 
-                                                   value="<?= htmlspecialchars($service['price_per_kg'] ?? 40) ?>" 
-                                                   class="w-full px-2 py-1 rounded-md bg-white border border-slate-300 focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none text-xs font-bold">
-                                        </div>
-                                    </div>
-                                    <button type="submit" name="update_service_pricing"
-                                            class="w-full mt-1 bg-slate-100 hover:bg-brandOrange hover:text-white text-slate-700 font-bold py-1 px-2 rounded-md text-[11px] transition-all border border-slate-200">
-                                        <i class="fa-solid fa-floppy-disk text-[10px] mr-1"></i> Update Pricing
-                                    </button>
-                                </form>
-                            </div>
+                <div class="p-5">
+                    <?php if (empty($services)): ?>
+                        <div class="p-8 text-center text-slate-400 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                            <i class="fa-solid fa-layer-group text-3xl mb-2 text-slate-300"></i>
+                            <p class="text-xs font-semibold">No active courier service tiers found.</p>
+                            <a href="admin_services.php" class="text-xs text-brandOrange hover:underline font-bold mt-1 inline-block">Manage Fleet &amp; Add Tier &rarr;</a>
                         </div>
-                    <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <?php foreach ($services as $service): ?>
+                                <div class="border border-slate-200 rounded-xl p-4 hover:shadow-md transition-shadow bg-slate-50/40 flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex items-center justify-between mb-2">
+                                            <h3 class="font-bold text-brandNavy text-xs"><?= htmlspecialchars($service['name']) ?></h3>
+                                            <?php if ($service['capacity'] > 0): ?>
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                                    <?= $service['capacity'] ?> Slots
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
+                                                    Full
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                        
+                                        <p class="text-[11px] text-slate-600 mb-3 line-clamp-2">
+                                            <?= htmlspecialchars($service['description']) ?>
+                                        </p>
+                                    </div>
+                                    
+                                    <div class="space-y-3 pt-3 border-t border-slate-200/80">
+                                        <div>
+                                            <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">Daily Capacity Slots</label>
+                                            <input type="number" name="services_capacity[<?= $service['id'] ?>]" min="0" 
+                                                   value="<?= $service['capacity'] ?>"
+                                                   class="w-full px-2.5 py-1.5 rounded-md bg-white border border-slate-300 focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none text-xs font-bold">
+                                        </div>
+
+                                        <div class="grid grid-cols-2 gap-2 text-[11px]">
+                                            <div>
+                                                <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Base Price (₱)</label>
+                                                <input type="number" step="0.01" min="0" name="services_base_price[<?= $service['id'] ?>]" 
+                                                       value="<?= htmlspecialchars($service['base_price'] ?? 100) ?>" 
+                                                       class="w-full px-2 py-1.5 rounded-md bg-white border border-slate-300 focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none text-xs font-bold">
+                                            </div>
+                                            <div>
+                                                <label class="block text-[10px] font-bold text-slate-500 mb-0.5">Per Kg (₱)</label>
+                                                <input type="number" step="0.01" min="0" name="services_price_per_kg[<?= $service['id'] ?>]" 
+                                                       value="<?= htmlspecialchars($service['price_per_kg'] ?? 40) ?>" 
+                                                       class="w-full px-2 py-1.5 rounded-md bg-white border border-slate-300 focus:ring-2 focus:ring-brandOrange focus:border-brandOrange outline-none text-xs font-bold">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
-            </div>
+            </form>
         </div>
 
         <!-- Manage Island Transit Rates Section -->
@@ -1409,20 +1478,33 @@ include __DIR__ . '/../includes/header.php';
                                         <?= nl2br(htmlspecialchars($msg['message'])) ?>
                                     </td>
                                     <td class="px-4 py-2.5 text-right whitespace-nowrap">
-                                        <?php if (empty($msg['is_read'])): ?>
-                                            <form method="POST" action="" class="inline">
+                                        <div class="inline-flex items-center gap-1.5 justify-end">
+                                            <?php if (empty($msg['is_read'])): ?>
+                                                <form method="POST" action="" class="inline">
+                                                    <?= csrfField() ?>
+                                                    <input type="hidden" name="message_id" value="<?= $msg['id'] ?>">
+                                                    <button type="submit" name="mark_message_read" 
+                                                            class="px-2.5 py-1 rounded-md bg-brandNavy hover:bg-slate-900 text-white font-bold text-[10px] shadow-sm transition-colors">
+                                                        <i class="fa-solid fa-check text-[9px] mr-1"></i> Mark Read
+                                                    </button>
+                                                </form>
+                                            <?php else: ?>
+                                                <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                                                    <i class="fa-solid fa-check-double text-[9px]"></i> Read
+                                                </span>
+                                            <?php endif; ?>
+
+                                            <!-- Delete Inquiry Button -->
+                                            <form method="POST" action="" class="inline" onsubmit="return confirm('Permanently delete this customer inquiry?');">
                                                 <?= csrfField() ?>
                                                 <input type="hidden" name="message_id" value="<?= $msg['id'] ?>">
-                                                <button type="submit" name="mark_message_read" 
-                                                        class="px-2.5 py-1 rounded-md bg-brandNavy hover:bg-slate-900 text-white font-bold text-[10px] shadow-sm transition-colors">
-                                                    <i class="fa-solid fa-check text-[9px] mr-1"></i> Mark Read
+                                                <button type="submit" name="delete_contact_message" 
+                                                        class="p-1.5 rounded-md hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition-colors"
+                                                        title="Delete Inquiry">
+                                                    <i class="fa-regular fa-trash-can text-xs"></i>
                                                 </button>
                                             </form>
-                                        <?php else: ?>
-                                            <span class="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                                                <i class="fa-solid fa-check-double text-[9px]"></i> Read
-                                            </span>
-                                        <?php endif; ?>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -1504,6 +1586,19 @@ include __DIR__ . '/../includes/header.php';
                         <?php endif; ?>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Clear Audit Logs Action -->
+            <div class="px-5 py-3 border-t border-slate-200 bg-slate-50/60 flex items-center justify-between">
+                <span class="text-[11px] text-slate-400 font-medium">Manage system security history</span>
+                <form method="POST" action="" onsubmit="return confirm('Permanently clear all audit log entries? This action cannot be undone.');">
+                    <?= csrfField() ?>
+                    <button type="submit" name="clear_audit_logs" 
+                            class="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5 shadow-2xs">
+                        <i class="fa-solid fa-trash-can text-[11px]"></i>
+                        <span>Clear All Logs</span>
+                    </button>
+                </form>
             </div>
         </div>
 

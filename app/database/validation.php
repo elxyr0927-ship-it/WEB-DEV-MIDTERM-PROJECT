@@ -55,9 +55,7 @@ function validateInArray(string $value, array $allowed, string $label): ?string
  */
 function getCsrfToken(): string
 {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+    startSecureSession();
     if (empty($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     }
@@ -72,9 +70,7 @@ function csrfField(): string
 
 function validateCsrfToken(?string $token): bool
 {
-    if (session_status() === PHP_SESSION_NONE) {
-        session_start();
-    }
+    startSecureSession();
     $sessionToken = $_SESSION['csrf_token'] ?? '';
     if (empty($sessionToken) || empty($token)) {
         return false;

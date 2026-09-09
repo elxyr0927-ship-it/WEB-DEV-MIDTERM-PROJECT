@@ -173,12 +173,11 @@ include __DIR__ . '/../includes/header.php';
                     <i class="fa-solid fa-boxes-packing text-slate-400 text-sm w-4 text-center flex-shrink-0"></i>
                     <span class="truncate">Customer Shipments</span>
                 </a>
-                <a href="tracking.php" target="_blank" class="flex items-center justify-between px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors" title="Live Tracker">
+                <a href="tracking.php" class="flex items-center justify-between px-3.5 py-2 rounded-xl text-slate-600 hover:bg-slate-100 transition-colors" title="Live Tracker">
                     <div class="flex items-center gap-3 truncate">
                         <i class="fa-solid fa-magnifying-glass-location text-slate-400 text-sm w-4 text-center flex-shrink-0"></i>
                         <span class="truncate">Live Tracker</span>
                     </div>
-                    <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-300"></i>
                 </a>
             </div>
 
@@ -196,7 +195,6 @@ include __DIR__ . '/../includes/header.php';
                     <div class="nested-nav pl-7 pr-2 pt-1 pb-1 space-y-1 border-l-2 border-slate-100 ml-4.5 mt-1">
                         <a href="admin_services.php" class="flex items-center justify-between py-1.5 px-2.5 rounded-lg text-slate-600 hover:text-brandNavy hover:bg-slate-100 transition-colors text-[11px]" title="Manage Tiers & Fleet">
                             <span class="truncate">Services & Fleet</span>
-                            <i class="fa-solid fa-arrow-up-right-from-square text-[9px] text-slate-300"></i>
                         </a>
                         <a href="admin_dashboard.php#capacities" class="flex items-center py-1.5 px-2.5 rounded-lg text-slate-600 hover:text-brandNavy hover:bg-slate-100 transition-colors text-[11px]">
                             <span class="truncate">Daily Capacities</span>
@@ -493,9 +491,14 @@ include __DIR__ . '/../includes/header.php';
 
             <!-- Quick Action Form inside Modal -->
             <div class="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                <a href="#" id="modalMailtoBtn" class="px-4 py-2 rounded-xl bg-brandOrange hover:bg-orange-600 text-white font-bold text-xs transition-colors shadow-sm inline-flex items-center gap-2">
-                    <i class="fa-solid fa-reply text-xs"></i> Reply via Email
-                </a>
+                <!-- Delete Inquiry from Modal -->
+                <form method="POST" action="" id="modalDeleteForm" class="inline" onsubmit="return confirm('Permanently delete/archive this inquiry?');">
+                    <?= csrfField() ?>
+                    <input type="hidden" name="message_id" id="modalDeleteMessageId" value="">
+                    <button type="submit" name="delete_message" class="px-3.5 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 font-bold text-xs transition-colors shadow-xs inline-flex items-center gap-1.5">
+                        <i class="fa-regular fa-trash-can text-xs"></i> Delete Inquiry
+                    </button>
+                </form>
                 
                 <form method="POST" action="" id="modalMarkReadForm" class="inline">
                     <?= csrfField() ?>
@@ -523,12 +526,11 @@ include __DIR__ . '/../includes/header.php';
         emailEl.textContent = data.email;
         emailEl.href = 'mailto:' + encodeURIComponent(data.email) + '?subject=' + encodeURIComponent('Re: ' + data.subject);
 
-        const mailtoBtn = document.getElementById('modalMailtoBtn');
-        mailtoBtn.href = 'mailto:' + encodeURIComponent(data.email) + '?subject=' + encodeURIComponent('Re: ' + data.subject);
-
         document.getElementById('modalDate').textContent = data.created_at;
         document.getElementById('modalMessageBody').textContent = data.message;
         document.getElementById('modalFormMessageId').value = data.id;
+        const delMsgInput = document.getElementById('modalDeleteMessageId');
+        if (delMsgInput) delMsgInput.value = data.id;
 
         const badge = document.getElementById('modalStatusBadge');
         const markReadBtn = document.getElementById('modalMarkReadBtn');

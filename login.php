@@ -1,7 +1,8 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/app/database/config.php';
+require_once __DIR__ . '/app/database/validation.php';
+
+startSecureSession();
 
 // If already logged in, redirect to appropriate dashboard
 if (isset($_SESSION['user_id'])) {
@@ -13,62 +14,92 @@ if (isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Include database and validation
-require_once 'app/database/config.php';
-require_once 'app/database/validation.php';
-
 $errors = [];
+
+// Initialize or check login attempt throttling (5 attempts per 60 seconds)
+if (!isset($_SESSION['login_attempts'])) {
+    $_SESSION['login_attempts'] = 0;
+    $_SESSION['login_throttle_time'] = 0;
+}
+
+// Reset throttling if 60 seconds have elapsed
+if ($_SESSION['login_throttle_time'] > 0 && time() > $_SESSION['login_throttle_time']) {
+    $_SESSION['login_attempts'] = 0;
+    $_SESSION['login_throttle_time'] = 0;
+}
 
 // Handle login submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // CSRF verification
-    if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
-        $errors[] = 'Invalid or expired security token (CSRF). Please refresh and try again.';
-    }
+    // Check if user is currently locked out
+    if ($_SESSION['login_throttle_time'] > time()) {
+        $remaining = $_SESSION['login_throttle_time'] - time();
+        $errors[] = "Too many failed login attempts. Please wait {$remaining} seconds before trying again.";
+    } else {
+        // CSRF verification
+        if (!validateCsrfToken($_POST['csrf_token'] ?? '')) {
+            $errors[] = 'Invalid or expired security token (CSRF). Please refresh and try again.';
+        }
 
-    $username = trim($_POST['username'] ?? '');
-    $password = $_POST['password'] ?? '';
+        $username = trim($_POST['username'] ?? '');
+        $password = $_POST['password'] ?? '';
 
-    // Validate required fields and lengths
-    if ($err = validateRequired($username, 'Username or Email')) $errors[] = $err;
-    if ($err = validateRequired($password, 'Password')) $errors[] = $err;
-    if ($err = validateStringLength($username, 'Username or Email', 100)) $errors[] = $err;
+        // Validate required fields and lengths
+        if ($err = validateRequired($username, 'Username or Email')) $errors[] = $err;
+        if ($err = validateRequired($password, 'Password')) $errors[] = $err;
+        if ($err = validateStringLength($username, 'Username or Email', 100)) $errors[] = $err;
 
-    if (empty($errors)) {
-        try {
-            $pdo = getConnection();
-            
-            // Find user by username OR email
-            $stmt = $pdo->prepare("SELECT id, username, password_hash, role FROM user WHERE username = :ident OR email = :ident");
-            $stmt->execute(['ident' => $username]);
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (empty($errors)) {
+            try {
+                $pdo = getConnection();
+                
+                // Find user by username OR email
+                $stmt = $pdo->prepare("SELECT id, username, password_hash, role FROM user WHERE username = :ident OR email = :ident");
+                $stmt->execute(['ident' => $username]);
+                $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Verify password
-            if ($user && password_verify($password, $user['password_hash'])) {
-                // Login success - store session
-                $_SESSION['user_id'] = $user['id'];
-                $_SESSION['username'] = $user['username'];
-                $_SESSION['role'] = $user['role'];
+                // Verify password
+                if ($user && password_verify($password, $user['password_hash'])) {
+                    // Reset rate limiter on successful authentication
+                    $_SESSION['login_attempts'] = 0;
+                    $_SESSION['login_throttle_time'] = 0;
 
-                // Check for safe redirect destination (e.g. booking.php)
-                $redirect = $_GET['redirect'] ?? ($_POST['redirect'] ?? '');
-                if (!empty($redirect) && strpos($redirect, '.php') !== false && !strpos($redirect, '://')) {
-                    header('Location: ' . $redirect);
+                    // Regenerate session ID to prevent Session Fixation attacks
+                    session_regenerate_id(true);
+
+                    // Login success - store session
+                    $_SESSION['user_id'] = $user['id'];
+                    $_SESSION['username'] = $user['username'];
+                    $_SESSION['role'] = $user['role'];
+
+                    // Check for safe redirect destination (e.g. booking.php)
+                    $redirect = $_GET['redirect'] ?? ($_POST['redirect'] ?? '');
+                    if (!empty($redirect) && strpos($redirect, '.php') !== false && !strpos($redirect, '://')) {
+                        header('Location: ' . $redirect);
+                        exit;
+                    }
+
+                    // Default role-based redirect
+                    if ($user['role'] === 'admin') {
+                        header('Location: admin_dashboard.php');
+                    } else {
+                        header('Location: customer_dashboard.php');
+                    }
                     exit;
-                }
-
-                // Default role-based redirect
-                if ($user['role'] === 'admin') {
-                    header('Location: admin_dashboard.php');
                 } else {
-                    header('Location: customer_dashboard.php');
+                    // Increment failed attempts
+                    $_SESSION['login_attempts'] = ($_SESSION['login_attempts'] ?? 0) + 1;
+                    if ($_SESSION['login_attempts'] >= 5) {
+                        $_SESSION['login_throttle_time'] = time() + 60; // 60-second cooldown
+                        $errors[] = 'Too many failed login attempts. Account temporarily throttled for 60 seconds.';
+                    } else {
+                        $remainingAttempts = 5 - $_SESSION['login_attempts'];
+                        $errors[] = "Invalid username/email or password. ({$remainingAttempts} attempt(s) remaining)";
+                    }
                 }
-                exit;
-            } else {
-                $errors[] = 'Invalid username/email or password.';
+            } catch (PDOException $e) {
+                error_log("Login error: " . $e->getMessage());
+                $errors[] = 'An error occurred during authentication. Please try again.';
             }
-        } catch (PDOException $e) {
-            $errors[] = 'Database error: ' . $e->getMessage();
         }
     }
 }

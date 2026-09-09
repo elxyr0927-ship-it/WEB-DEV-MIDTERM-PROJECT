@@ -1,7 +1,14 @@
 RewriteEngine On
 RewriteBase /Express/
 
+# Block all hidden files (starting with dot, e.g. .env, .git, .htaccess)
 <FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Block direct access to config and sql files
+<FilesMatch "(^config\.php|\.env|\.sql|\.json|\.lock)$">
     Order allow,deny
     Deny from all
 </FilesMatch>
@@ -16,3 +23,4 @@ RewriteRule ^ - [L]
 
 # Otherwise, redirect everything cleanly through index.php
 RewriteRule ^(.*)$ index.php?page=$1 [QSA,L]
+
